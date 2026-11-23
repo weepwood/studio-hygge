@@ -41,9 +41,13 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      - name: Install browser testing tools
+      - name: Install browser testing tools in an isolated directory
         run: |
-          npm install --no-save --no-package-lock playwright
-          npx playwright install --with-deps chromium
+          mkdir -p "$RUNNER_TEMP/hygge-browser"
+          printf '{"name":"hygge-browser","private":true,"type":"module"}' > "$RUNNER_TEMP/hygge-browser/package.json"
+          npm install --prefix "$RUNNER_TEMP/hygge-browser" --no-audit --no-fund playwright
+          "$RUNNER_TEMP/hygge-browser/node_modules/.bin/playwright" install --with-deps chromium
       - name: Browser smoke test
-        run: node scripts/browser-smoke.mjs
+        run: |
+          cp scripts/browser-smoke.mjs "$RUNNER_TEMP/hygge-browser/smoke.mjs"
+          node "$RUNNER_TEMP/hygge-browser/smoke.mjs"
