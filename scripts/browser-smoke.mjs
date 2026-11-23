@@ -20,7 +20,7 @@ async function waitForPreview(page, tool) {
   const response = await page.goto(site+'/'+tool)
   console.log('Opening',tool,'response',response?.status(),'url',page.url())
   try {
-    await page.getByRole('heading',{name:tool,exact:true}).waitFor({timeout:30000})
+    await page.getByRole('heading',{name:tool[0].toUpperCase()+tool.slice(1),exact:true}).waitFor({timeout:30000})
   } catch(error) {
     console.error('Body snapshot:',(await page.locator('body').innerText()).slice(0,1600))
     console.error('Page errors:',errors)
