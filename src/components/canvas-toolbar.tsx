@@ -1,5 +1,5 @@
 
-import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react"
+import { ZoomIn, ZoomOut, Maximize2, Undo2, Redo2 } from "lucide-react"
 import type { PreviewQuality } from "@/lib/canvas-size"
 import { useI18n } from "@/lib/i18n"
 
@@ -10,11 +10,18 @@ interface Props {
   onQualityChange: (quality: PreviewQuality) => void
   exporting?: boolean
   exportError?: string | null
+  onUndo?: () => void
+  onRedo?: () => void
+  canUndo?: boolean
+  canRedo?: boolean
 }
-export function CanvasToolbar({zoom,onZoomChange,quality,onQualityChange,exporting=false,exportError}: Props) {
+export function CanvasToolbar({zoom,onZoomChange,quality,onQualityChange,exporting=false,exportError,onUndo,onRedo,canUndo,canRedo}: Props) {
   const {isChinese} = useI18n()
   const label = isChinese ? "预览" : "Preview"
   return <div className="absolute bottom-4 left-1/2 z-20 flex max-w-[calc(100%-1rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-1 rounded-2xl border border-border-control/85 bg-[#fffdf9]/95 p-1.5 text-text-secondary shadow-[0_8px_28px_rgba(91,58,41,.1)] backdrop-blur-md" role="toolbar" aria-label={isChinese?"画布工具栏":"Canvas toolbar"}>
+    {onUndo && <button type="button" aria-label={isChinese?"撤销":"Undo"} disabled={!canUndo} onClick={onUndo} className="rounded-lg p-2 hover:bg-hygge-oat/50 disabled:opacity-30"><Undo2 size={14}/></button>}
+    {onRedo && <button type="button" aria-label={isChinese?"重做":"Redo"} disabled={!canRedo} onClick={onRedo} className="rounded-lg p-2 hover:bg-hygge-oat/50 disabled:opacity-30"><Redo2 size={14}/></button>}
+    {(onUndo || onRedo) && <span className="mx-1 h-5 w-px bg-border-control" aria-hidden="true"/>}
     <button type="button" aria-label={isChinese?"缩小":"Zoom out"} onClick={()=>onZoomChange(Math.max(.5,+(zoom-.25).toFixed(2)))} className="rounded-lg p-2 hover:bg-hygge-oat/50 focus-visible:outline-2 focus-visible:outline-hygge-rust"><ZoomOut size={15}/></button>
     <span className="min-w-[41px] text-center font-mono text-xs tabular-nums">{Math.round(zoom*100)}%</span>
     <button type="button" aria-label={isChinese?"放大":"Zoom in"} onClick={()=>onZoomChange(Math.min(2,+(zoom+.25).toFixed(2)))} className="rounded-lg p-2 hover:bg-hygge-oat/50 focus-visible:outline-2 focus-visible:outline-hygge-rust"><ZoomIn size={15}/></button>

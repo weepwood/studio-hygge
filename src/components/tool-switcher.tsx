@@ -1,7 +1,7 @@
 import { setStoredValue } from "@/lib/safe-storage"
 import { useState, useEffect } from "react"
 import { NavLink, useLocation } from "react-router-dom"
-import { BookmarkCheck, BookmarkPlus, Dices, Download, FileImage, Image, RotateCcw, Video } from "lucide-react"
+import { BookmarkCheck, BookmarkPlus, Dices, Download, FileImage, Image, RotateCcw, Video, Undo2, Redo2 } from "lucide-react"
 import { preloadTool, tools } from "@/tools/registry"
 import { ToolIcon } from "@/components/icons"
 import { useMobile } from "@/hooks/use-mobile"
@@ -93,6 +93,10 @@ export function ToolSwitcher() {
   const actions = (
     <div className="space-y-2.5">
       <div className="space-y-0.5">
+        <div className="grid grid-cols-2 gap-1">
+          <ActionButton icon={<Undo2 className="size-4" />} label={t("Undo")} onClick={() => shortcutActions.undo?.()} />
+          <ActionButton icon={<Redo2 className="size-4" />} label={t("Redo")} onClick={() => shortcutActions.redo?.()} />
+        </div>
         <ActionButton icon={<Dices className="size-4" />} label={t("Randomize")} shortcut="R" onClick={() => shortcutActions.randomize?.()} />
         <ActionButton icon={<RotateCcw className="size-4" />} label={t("Reset")} shortcut="⌫" onClick={() => shortcutActions.reset?.()} />
       </div>

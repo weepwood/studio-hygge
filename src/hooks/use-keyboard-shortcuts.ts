@@ -23,6 +23,13 @@ export function useKeyboardShortcuts() {
       // Suppress other shortcuts when typing in inputs
       if (isInput) return
 
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.altKey) {
+        e.preventDefault()
+        if (e.shiftKey) shortcutActions.redo?.()
+        else shortcutActions.undo?.()
+        return
+      }
+
       // Tool switching: 1-8
       const num = parseInt(e.key)
       if (num >= 1 && num <= 8 && !e.metaKey && !e.ctrlKey && !e.altKey) {

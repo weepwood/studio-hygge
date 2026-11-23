@@ -14,7 +14,7 @@ import { sanitizeSettings } from "@/lib/settings-schema";
 export function useSettings<T extends Record<string, unknown>>(
   key: string,
   defaults: T,
-): [T, (patch: Partial<T>) => void, () => void] {
+): [T, (patch: Partial<T>) => void, () => void, () => void, () => void, boolean, boolean] {
   const storageKey = `studio:${key}`;
   const [settings, setSettings] = useState<T>(() => {
     // Priority: URL params > localStorage > defaults
@@ -42,6 +42,7 @@ export function useSettings<T extends Record<string, unknown>>(
     return defaults;
   });
   const latestRef = useRef(settings);
+  const historyRef = useRef<{past:T[];future:T[]}>({past:[],future:[]});
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRef = useRef<T | null>(null);
@@ -110,6 +111,7 @@ export function useSettings<T extends Record<string, unknown>>(
         if (raw) {
           const next = sanitizeSettings(key, JSON.parse(raw), defaults)
           latestRef.current = next
+          historyRef.current = {past:[],future:[]}
           setSettings(next)
         }
       } catch {
@@ -120,24 +122,47 @@ export function useSettings<T extends Record<string, unknown>>(
     return () => window.removeEventListener('studio:settings-loaded', onSettingsLoaded)
   }, [clearPendingWrite, defaults, storageKey])
 
-  const update = useCallback(
-    (patch: Partial<T>) => {
-      setSettings((prev) => {
-        const next = sanitizeSettings(key, { ...prev, ...patch }, defaults);
-        writeToStorage(next);
-        return next;
-      });
-    },
-    [writeToStorage, key, defaults],
-  );
+  const update = useCallback((patch: Partial<T>) => {
+    const previous = latestRef.current;
+    const next = sanitizeSettings(key, {...previous,...patch},defaults);
+    if (JSON.stringify(previous) === JSON.stringify(next)) return;
+    historyRef.current.past.push(previous);
+    if (historyRef.current.past.length > 50) historyRef.current.past.shift();
+    historyRef.current.future = [];
+    latestRef.current = next;
+    setSettings(next);
+    writeToStorage(next);
+  },[writeToStorage,key,defaults]);
 
   const reset = useCallback(() => {
-    // Reset must win over any in-flight debounced write from a prior update.
+    const previous = latestRef.current;
+    historyRef.current.past.push(previous);
+    if (historyRef.current.past.length > 50) historyRef.current.past.shift();
+    historyRef.current.future = [];
     clearPendingWrite();
     latestRef.current = defaults;
     setSettings(defaults);
     setStoredValue(storageKey, JSON.stringify(defaults));
   }, [clearPendingWrite, defaults, storageKey]);
 
-  return [settings, update, reset];
+  const undo = useCallback(() => {
+    const previous = historyRef.current.past.pop();
+    if (!previous) return;
+    historyRef.current.future.push(latestRef.current);
+    latestRef.current = previous;
+    setSettings(previous);
+    writeToStorage(previous);
+  }, [writeToStorage]);
+
+  const redo = useCallback(() => {
+    const next = historyRef.current.future.pop();
+    if (!next) return;
+    historyRef.current.past.push(latestRef.current);
+    latestRef.current = next;
+    setSettings(next);
+    writeToStorage(next);
+  }, [writeToStorage]);
+
+  return [settings, update, reset, undo, redo,
+    historyRef.current.past.length > 0, historyRef.current.future.length > 0];
 }

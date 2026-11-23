@@ -24,7 +24,7 @@ const MAX_RECORDING_DIM = 1080
 const MAX_RECORDING_MS = 60_000
 
 export default function Marble() {
-  const [settings, update, reset] = useSettings<MarbleSettings>("marble", DEFAULTS)
+  const [settings, update, reset, undo, redo, canUndo, canRedo] = useSettings<MarbleSettings>("marble", DEFAULTS)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const engineRef = useRef<MarbleEngine | null>(null)
   const recorderRef = useRef<Recorder | null>(null)
@@ -207,7 +207,7 @@ export default function Marble() {
     }
   }
 
-  useShortcutActions({ randomize, reset, download, toggleRecording })
+  useShortcutActions({ randomize, reset, undo, redo, download, toggleRecording })
 
   return (
     <>
@@ -383,7 +383,7 @@ export default function Marble() {
       <CanvasArea className="preview-stage" style={{'--preview-zoom':zoom} as React.CSSProperties}>
         <canvas ref={canvasRef} style={{maxWidth:'100%', maxHeight:'100%'}} />
         <CanvasRenderFeedback status={renderStatus} />
-        <CanvasToolbar zoom={zoom} onZoomChange={setZoom} quality={quality} onQualityChange={setQuality} exporting={exporting || isRecording} exportError={exportError} />
+        <CanvasToolbar onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} zoom={zoom} onZoomChange={setZoom} quality={quality} onQualityChange={setQuality} exporting={exporting || isRecording} exportError={exportError} />
       </CanvasArea>
     </>
   )

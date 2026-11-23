@@ -52,7 +52,7 @@ export default function Blocks() {
   const [renderStatus, setRenderStatus] = useState<RenderStatus>('loading')
   const containerRef = useRef<HTMLDivElement>(null)
   const geometryRef = useRef<BlocksGeometry | null>(null)
-  const [settings, update, reset] = useSettings<BlocksSettings>('blocks', DEFAULTS)
+  const [settings, update, reset, undo, redo, canUndo, canRedo] = useSettings<BlocksSettings>('blocks', DEFAULTS)
   const [quality, setQuality] = useState<PreviewQuality>('balanced')
   const [zoom, setZoom] = useState(1)
   const [exporting, setExporting] = useState(false)
@@ -90,6 +90,8 @@ export default function Blocks() {
   useShortcutActions({
     randomize,
     reset,
+    undo,
+    redo,
     download: hasRasterEffects ? handleExportPNG : handleExportSVG,
     exportPng: handleExportPNG,
     exportSvg: handleExportSVG,
@@ -366,7 +368,7 @@ export default function Blocks() {
       </Sidebar>
       <CanvasArea ref={containerRef} className="preview-stage" style={{'--preview-zoom':zoom} as React.CSSProperties}>
         <CanvasRenderFeedback status={renderStatus} />
-        <CanvasToolbar zoom={zoom} onZoomChange={setZoom} quality={quality} onQualityChange={setQuality} exporting={exporting} exportError={exportError} />
+        <CanvasToolbar onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} zoom={zoom} onZoomChange={setZoom} quality={quality} onQualityChange={setQuality} exporting={exporting} exportError={exportError} />
       </CanvasArea>
     </>
   )
