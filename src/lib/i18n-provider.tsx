@@ -1,13 +1,14 @@
+import { getStoredValue, setStoredValue } from "@/lib/safe-storage"
 import { useEffect, useMemo, useState } from "react"
 import { I18nContext, type I18nValue, type Language, zh } from "@/lib/i18n"
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() =>
-    localStorage.getItem("studio:language") === "zh" ? "zh" : "en",
+    getStoredValue("studio:language") === "zh" ? "zh" : "en",
   )
 
   const setLanguage = (next: Language) => {
-    localStorage.setItem("studio:language", next)
+    setStoredValue("studio:language", next)
     setLanguageState(next)
   }
 

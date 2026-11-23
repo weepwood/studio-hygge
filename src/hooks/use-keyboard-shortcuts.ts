@@ -1,3 +1,4 @@
+import { setStoredValue } from "@/lib/safe-storage"
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { tools } from '@/tools/registry'
@@ -27,7 +28,7 @@ export function useKeyboardShortcuts() {
       if (num >= 1 && num <= 8 && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const tool = tools[num - 1]
         if (tool) {
-          localStorage.setItem('studio:last-tool', tool.id)
+          setStoredValue('studio:last-tool', tool.id)
           navigate(`/${tool.id}`)
         }
         return

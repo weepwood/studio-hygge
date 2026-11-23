@@ -42,9 +42,17 @@ function tx<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBReque
   )
 }
 
+// IndexedDB is unavailable in opaque-origin iframes. Retain designs for the
+// current embedded session; the direct site still persists them in IndexedDB.
+const sessionDesigns = new Map<string, SavedDesign>()
+
 export async function getSavedDesigns(): Promise<SavedDesign[]> {
-  const all = await tx<SavedDesign[]>('readonly', (s) => s.getAll())
-  return all.sort((a, b) => b.createdAt - a.createdAt)
+  try {
+    const all = await tx<SavedDesign[]>('readonly', (s) => s.getAll())
+    return [...all, ...sessionDesigns.values()].sort((a, b) => b.createdAt - a.createdAt)
+  } catch {
+    return [...sessionDesigns.values()].sort((a, b) => b.createdAt - a.createdAt)
+  }
 }
 
 function generateThumbnail(canvas: HTMLCanvasElement): string {
@@ -88,17 +96,35 @@ export async function saveDesign(
     createdAt: Date.now(),
   }
 
-  await tx('readwrite', (s) => s.put(design))
+  try {
+    await tx('readwrite', (s) => s.put(design))
+  } catch {
+    sessionDesigns.set(design.id, design)
+  }
   return design
 }
 
 export async function deleteDesign(id: string): Promise<void> {
-  await tx('readwrite', (s) => s.delete(id))
+  sessionDesigns.delete(id)
+  try {
+    await tx('readwrite', (s) => s.delete(id))
+  } catch {
+    // Embedded sessions use the in-memory fallback.
+  }
 }
 
 export async function renameDesign(id: string, name: string): Promise<void> {
-  const design = await tx<SavedDesign>('readonly', (s) => s.get(id))
-  if (!design) return
-  design.name = name
-  await tx('readwrite', (s) => s.put(design))
+  const transient = sessionDesigns.get(id)
+  if (transient) {
+    transient.name = name
+    return
+  }
+  try {
+    const design = await tx<SavedDesign>('readonly', (s) => s.get(id))
+    if (!design) return
+    design.name = name
+    await tx('readwrite', (s) => s.put(design))
+  } catch {
+    // Nothing to rename if persistent storage was blocked.
+  }
 }

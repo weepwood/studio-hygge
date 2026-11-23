@@ -1,3 +1,4 @@
+import { getStoredValue, setStoredValue } from "@/lib/safe-storage"
 import { useState, useCallback, useRef, useEffect } from "react";
 import { shortcutActions } from "@/lib/shortcut-actions";
 import { settingsFromBase64Url } from "@/lib/url-settings";
@@ -22,14 +23,14 @@ export function useSettings<T extends Record<string, unknown>>(
       const decoded = settingsFromBase64Url(encoded);
       if (decoded) {
         const merged = { ...defaults, ...(decoded as Partial<T>) };
-        localStorage.setItem(storageKey, JSON.stringify(merged));
-        window.history.replaceState({}, "", window.location.pathname);
+        setStoredValue(storageKey, JSON.stringify(merged));
+        try { window.history.replaceState({}, "", window.location.pathname); } catch { /* opaque iframe origin */ }
         return merged;
       }
     }
 
     try {
-      const raw = localStorage.getItem(storageKey);
+      const raw = getStoredValue(storageKey);
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<T>;
         return { ...defaults, ...parsed };
@@ -54,7 +55,7 @@ export function useSettings<T extends Record<string, unknown>>(
     timerRef.current = null;
     if (pendingRef.current !== null) {
       const next = pendingRef.current;
-      localStorage.setItem(storageKey, JSON.stringify(next));
+      setStoredValue(storageKey, JSON.stringify(next));
       latestRef.current = next;
       pendingRef.current = null;
     }
@@ -74,7 +75,7 @@ export function useSettings<T extends Record<string, unknown>>(
       if (timerRef.current) clearTimeout(timerRef.current);
       pendingRef.current = value;
       timerRef.current = setTimeout(() => {
-        localStorage.setItem(storageKey, JSON.stringify(value));
+        setStoredValue(storageKey, JSON.stringify(value));
         pendingRef.current = null;
       }, 200);
     },
@@ -104,7 +105,7 @@ export function useSettings<T extends Record<string, unknown>>(
       if (detail?.key !== storageKey) return
       try {
         clearPendingWrite()
-        const raw = localStorage.getItem(storageKey)
+        const raw = getStoredValue(storageKey)
         if (raw) {
           const next = { ...defaults, ...JSON.parse(raw) }
           latestRef.current = next
@@ -134,7 +135,7 @@ export function useSettings<T extends Record<string, unknown>>(
     clearPendingWrite();
     latestRef.current = defaults;
     setSettings(defaults);
-    localStorage.setItem(storageKey, JSON.stringify(defaults));
+    setStoredValue(storageKey, JSON.stringify(defaults));
   }, [clearPendingWrite, defaults, storageKey]);
 
   return [settings, update, reset];

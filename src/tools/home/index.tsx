@@ -1,3 +1,4 @@
+import { setStoredValue } from "@/lib/safe-storage"
 import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowUpRight } from "lucide-react"
@@ -41,7 +42,7 @@ export default function Home() {
                 key={tool.id}
                 type="button"
                 onClick={() => {
-                  localStorage.setItem("studio:last-tool", tool.id)
+                  setStoredValue("studio:last-tool", tool.id)
                   navigate(`/${tool.id}`)
                 }}
                 className="warm-card group overflow-hidden rounded-[1.35rem] border border-border-control/80 bg-surface-elevated text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"

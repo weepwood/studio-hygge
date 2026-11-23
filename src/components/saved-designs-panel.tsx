@@ -1,3 +1,4 @@
+import { setStoredValue } from "@/lib/safe-storage"
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { X, Bookmark } from 'lucide-react'
@@ -107,7 +108,7 @@ export function SavedDesignsPanel({ open, onOpenChange }: SavedDesignsPanelProps
   const toolIds = [...new Set(designs.map((d) => d.toolId))]
 
   const handleLoad = (design: SavedDesign) => {
-    localStorage.setItem(`studio:${design.toolId}`, JSON.stringify(design.settings))
+    setStoredValue(`studio:${design.toolId}`, JSON.stringify(design.settings))
     setSourceImage(design.toolId, design.sourceImage ?? null)
     window.dispatchEvent(
       new CustomEvent('studio:settings-loaded', { detail: { key: `studio:${design.toolId}` } }),
