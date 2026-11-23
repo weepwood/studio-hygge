@@ -7,9 +7,9 @@ import { useI18n } from "@/lib/i18n"
 import { LanguageToggle } from "@/components/language-toggle"
 
 const previews: Record<string, { image: string; note: string; number: string }> = {
-  topo: { image: "/topo.jpg", note: "Contours & quiet landscapes", number: "01" },
-  blocks: { image: "/blocks.jpg", note: "A little order, a little chance", number: "02" },
-  marble: { image: "/marble.jpg", note: "Fluid color, softly layered", number: "03" },
+  topo: { image: `${import.meta.env.BASE_URL}topo.jpg`, note: "Contours & quiet landscapes", number: "01" },
+  blocks: { image: `${import.meta.env.BASE_URL}blocks.jpg`, note: "A little order, a little chance", number: "02" },
+  marble: { image: `${import.meta.env.BASE_URL}marble.jpg`, note: "Fluid color, softly layered", number: "03" },
 }
 
 export default function Home() {
