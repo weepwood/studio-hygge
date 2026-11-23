@@ -69,14 +69,18 @@ export default function Topo() {
   const containerRef = useRef<HTMLDivElement>(null)
   const geometryRef = useRef<TopoGeometry | null>(null)
   const [settings, update, reset, undo, redo, canUndo, canRedo] = useSettings<TopoSettings>('topo', DEFAULTS)
-  const [quality, setQuality] = useState<PreviewQuality>('balanced')
+  const [quality, setQuality] = useState<PreviewQuality>('auto')
   const [zoom, setZoom] = useState(1)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
   const exportBusyRef = useRef(false)
   const previewSettings = useMemo(() => {
-    const [w, h] = resolvePreviewSize(resolveCanvasSize(settings.canvasPreset, settings.customWidth, settings.customHeight), quality)
-    return {...settings, canvasPreset: 'custom' as CanvasPreset, customWidth:w, customHeight:h}
+    const [fullW,fullH] = resolveCanvasSize(settings.canvasPreset, settings.customWidth, settings.customHeight)
+    const [w, h] = resolvePreviewSize([fullW,fullH], quality)
+    const scale = w / fullW
+    return {...settings, canvasPreset: 'custom' as CanvasPreset, customWidth:w, customHeight:h,
+      strokeWeight:settings.strokeWeight*scale, margin:settings.margin*scale,
+      wobble:settings.wobble*scale, roughness:settings.roughness*scale}
   }, [settings, quality])
   async function runExport(task: () => Promise<void>) {
     if (exportBusyRef.current) return

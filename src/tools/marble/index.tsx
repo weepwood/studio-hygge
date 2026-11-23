@@ -31,7 +31,7 @@ export default function Marble() {
   const recordTimerRef = useRef<number | null>(null)
   const startingRef = useRef(false)
   const exportBusyRef = useRef(false)
-  const [quality, setQuality] = useState<PreviewQuality>('balanced')
+  const [quality, setQuality] = useState<PreviewQuality>('auto')
   const [zoom, setZoom] = useState(1)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)

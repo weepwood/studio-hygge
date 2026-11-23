@@ -1,6 +1,6 @@
 
 export type CanvasPreset = 'square' | 'landscape' | 'wide' | 'portrait' | 'tall' | 'custom'
-export type PreviewQuality = 'fast' | 'balanced' | 'detail'
+export type PreviewQuality = 'auto' | 'fast' | 'balanced' | 'detail'
 export const CANVAS_PRESETS: Record<Exclude<CanvasPreset, 'custom'>, [number, number]> = {
   square: [2048, 2048], landscape: [2048, 1536], wide: [3840, 2160],
   portrait: [1536, 2048], tall: [2160, 3840],
@@ -26,9 +26,16 @@ export function resolveCanvasSize(preset: CanvasPreset, customWidth: number, cus
   }
   return CANVAS_PRESETS[preset] ?? CANVAS_PRESETS.square
 }
-export const PREVIEW_LIMITS: Record<PreviewQuality, number> = {fast: 760, balanced: 1120, detail: 1680}
+export const PREVIEW_LIMITS: Record<Exclude<PreviewQuality,'auto'>, number> = {fast: 760, balanced: 1120, detail: 1680}
+export function recommendedPreviewQuality(): Exclude<PreviewQuality,'auto'> {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return 'balanced'
+  const cores = navigator.hardwareConcurrency ?? 4
+  const memory = (navigator as Navigator & {deviceMemory?:number}).deviceMemory
+  if (window.matchMedia('(max-width: 767px)').matches || cores <= 4 || (memory !== undefined && memory <= 4)) return 'fast'
+  return 'balanced'
+}
 export function resolvePreviewSize(size: readonly [number, number], quality: PreviewQuality): [number, number] {
   const [w, h] = size
-  const scale = Math.min(1, PREVIEW_LIMITS[quality] / Math.max(w, h))
+  const scale = Math.min(1, PREVIEW_LIMITS[quality === 'auto' ? recommendedPreviewQuality() : quality] / Math.max(w, h))
   return [Math.max(1, Math.round(w * scale)), Math.max(1, Math.round(h * scale))]
 }

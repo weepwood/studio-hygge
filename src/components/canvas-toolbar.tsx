@@ -29,6 +29,7 @@ export function CanvasToolbar({zoom,onZoomChange,quality,onQualityChange,exporti
     <span className="mx-1 h-5 w-px bg-border-control" aria-hidden="true"/>
     <label className="sr-only" htmlFor="preview-quality">{label}</label>
     <select id="preview-quality" value={quality} onChange={e=>onQualityChange(e.target.value as PreviewQuality)} className="max-w-32 rounded-lg bg-transparent px-2 py-1.5 text-xs text-text-secondary hover:bg-hygge-oat/50 focus-visible:outline-2 focus-visible:outline-hygge-rust">
+      <option value="auto">{isChinese?"自动推荐":"Auto"}</option>
       <option value="fast">{isChinese?"快速预览":"Fast"}</option>
       <option value="balanced">{isChinese?"平衡预览":"Balanced"}</option>
       <option value="detail">{isChinese?"精细预览":"Detail"}</option>

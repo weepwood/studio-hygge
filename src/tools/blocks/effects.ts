@@ -10,6 +10,13 @@ export function processBlocksPixels(
   const halftoneStrength = s.halftone / 100
   const textureVariation = textureStrength * 50
   const grainVariation = grainStrength * 35
+  let rng = (s.seed ^ (w * 31) ^ (h * 17) ^ 0x4f2d3b19) | 0
+  function random() {
+    rng ^= rng << 13
+    rng ^= rng >>> 17
+    rng ^= rng << 5
+    return (rng >>> 0) / 4294967296
+  }
   if (textureStrength > 0 || grainStrength > 0) {
       const invD2 = 1 / (d * 2)
       const hasGrain = grainStrength > 0
@@ -29,7 +36,7 @@ export function processBlocksPixels(
           }
 
           if (hasGrain) {
-            variation += (Math.random() - 0.5) * grainScale
+            variation += (random() - 0.5) * grainScale
           }
 
           // Ternary clamp avoids Math.min/Math.max function call overhead
