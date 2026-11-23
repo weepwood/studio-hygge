@@ -47,7 +47,7 @@ export function withExportSketch<T, G, R>(
               // setup() draws the complete image in both current p5 sketches.
               window.setTimeout(() => {
                 if (done) return
-                const canvas = p.canvas as HTMLCanvasElement | undefined
+                const canvas = (p as unknown as {canvas?: HTMLCanvasElement}).canvas
                 if (!canvas) { finish(new Error("Canvas unavailable")); return }
                 Promise.resolve().then(() => capture(canvas, geometryRef.current))
                   .then(value => finish(undefined, value), error => finish(error))
