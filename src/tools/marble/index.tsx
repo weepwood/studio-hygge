@@ -30,6 +30,7 @@ export default function Marble() {
   const recorderRef = useRef<Recorder | null>(null)
   const recordTimerRef = useRef<number | null>(null)
   const startingRef = useRef(false)
+  const mountedRef = useRef(false)
   const exportBusyRef = useRef(false)
   const [quality, setQuality] = useState<PreviewQuality>('auto')
   const [zoom, setZoom] = useState(1)
@@ -47,6 +48,7 @@ export default function Marble() {
   // Mount React controls first. Compiling shaders starts only after the first paint.
   useEffect(() => {
     let disposed = false
+    mountedRef.current = true
     const canvas = canvasRef.current
     if (!canvas) return
     function initialize() {
@@ -88,6 +90,7 @@ export default function Marble() {
     const cancelScheduled = scheduleAfterPaint(initialize)
     return () => {
       disposed = true
+      mountedRef.current = false
       cancelScheduled()
       canvas.removeEventListener('webglcontextlost',contextLost)
       canvas.removeEventListener('webglcontextrestored',contextRestored)
@@ -192,6 +195,7 @@ export default function Marble() {
         codec:'avc1.640028',width:recW,height:recH,bitrate,framerate:30,
       })
       if (!supported.supported) throw new Error('H.264 encoding is unsupported on this device')
+      if (!mountedRef.current) return
       const recorder = createRecorder({width:recW,height:recH,sourceWidth:sourceW,sourceHeight:sourceH,fps:30,bitrate})
       if (!recorder) throw new Error('Recorder is unavailable')
       recorder.start()
@@ -383,7 +387,7 @@ export default function Marble() {
       <CanvasArea className="preview-stage" style={{'--preview-zoom':zoom} as React.CSSProperties}>
         <canvas ref={canvasRef} style={{maxWidth:'100%', maxHeight:'100%'}} />
         <CanvasRenderFeedback status={renderStatus} />
-        <CanvasToolbar onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} zoom={zoom} onZoomChange={setZoom} quality={quality} onQualityChange={setQuality} exporting={exporting || isRecording} exportError={exportError} />
+        <CanvasToolbar onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} zoom={zoom} onZoomChange={setZoom} quality={quality} onQualityChange={setQuality} exporting={exporting} recording={isRecording} exportError={exportError} />
       </CanvasArea>
     </>
   )

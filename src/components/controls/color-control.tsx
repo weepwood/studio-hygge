@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { HexColorPicker } from "react-colorful"
 import { useI18n } from "@/lib/i18n"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
@@ -8,8 +8,10 @@ const validHex = /^#[0-9a-fA-F]{6}$/
 export function ColorControl({label,value,onChange}:ColorControlProps) {
   const {t,isChinese} = useI18n()
   const [draft,setDraft] = useState(value)
+  const cancelledRef = useRef(false)
   useEffect(()=>setDraft(value),[value])
   function commit() {
+    if (cancelledRef.current) {cancelledRef.current=false;setDraft(value);return}
     if (validHex.test(draft)) onChange(draft)
     else setDraft(value)
   }
@@ -25,7 +27,7 @@ export function ColorControl({label,value,onChange}:ColorControlProps) {
         <HexColorPicker color={value} onChange={onChange} />
         <input type="text" aria-label={isChinese?`${t(label)}十六进制颜色值`:`${label} hex color`}
           value={draft} onChange={e=>{if (/^#[0-9a-fA-F]{0,6}$/.test(e.target.value)) setDraft(e.target.value)}}
-          onBlur={commit} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();if(e.key==='Escape')setDraft(value)}}
+          onBlur={commit} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();if(e.key==='Escape'){cancelledRef.current=true;e.currentTarget.blur()}}}
           className="h-7 w-full rounded-md border border-border-control bg-control-bg px-2 font-mono text-xs text-text-primary focus-visible:outline-2 focus-visible:outline-hygge-rust" />
       </PopoverContent>
     </Popover>

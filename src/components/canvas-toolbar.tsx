@@ -9,13 +9,14 @@ interface Props {
   quality: PreviewQuality
   onQualityChange: (quality: PreviewQuality) => void
   exporting?: boolean
+  recording?: boolean
   exportError?: string | null
   onUndo?: () => void
   onRedo?: () => void
   canUndo?: boolean
   canRedo?: boolean
 }
-export function CanvasToolbar({zoom,onZoomChange,quality,onQualityChange,exporting=false,exportError,onUndo,onRedo,canUndo,canRedo}: Props) {
+export function CanvasToolbar({zoom,onZoomChange,quality,onQualityChange,exporting=false,recording=false,exportError,onUndo,onRedo,canUndo,canRedo}: Props) {
   const {isChinese} = useI18n()
   const label = isChinese ? "预览" : "Preview"
   return <div className="absolute bottom-4 left-1/2 z-20 flex max-w-[calc(100%-1rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-1 rounded-2xl border border-border-control/85 bg-[#fffdf9]/95 p-1.5 text-text-secondary shadow-[0_8px_28px_rgba(91,58,41,.1)] backdrop-blur-md" role="toolbar" aria-label={isChinese?"画布工具栏":"Canvas toolbar"}>
@@ -35,6 +36,7 @@ export function CanvasToolbar({zoom,onZoomChange,quality,onQualityChange,exporti
       <option value="detail">{isChinese?"精细预览":"Detail"}</option>
     </select>
     {exporting && <span role="status" className="px-2 text-[10px] text-hygge-rust">{isChinese?"正在导出…":"Exporting…"}</span>}
+    {recording && <span role="status" className="px-2 text-[10px] text-red-700">{isChinese?"● 正在录制（最长 60 秒）":"● Recording (max 60s)"}</span>}
     {exportError && <span role="alert" className="max-w-44 truncate px-2 text-[10px] text-red-700" title={exportError}>{isChinese?"导出失败":"Export failed"}</span>}
   </div>
 }
