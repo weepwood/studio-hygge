@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useI18n } from "@/lib/i18n"
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -13,12 +14,13 @@ interface SectionProps {
 
 export function Section({ title, children, defaultOpen = true }: SectionProps) {
   const [open, setOpen] = useState(defaultOpen)
+  const { t } = useI18n()
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between py-2">
-        <span className="font-mono text-2xs font-medium uppercase tracking-wide text-text-tertiary">
-          {title}
+        <span className="font-sans text-2xs font-semibold uppercase tracking-[.13em] text-hygge-rust">
+          {t(title)}
         </span>
         <svg
           width="10"

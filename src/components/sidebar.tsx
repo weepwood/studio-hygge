@@ -1,152 +1,22 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
 import { useMobile } from '@/hooks/use-mobile'
-import { shortcutActions } from '@/lib/shortcut-actions'
-import { saveDesign } from '@/lib/saved-designs'
-import { copyImageToClipboard, nativeShare, canNativeShare } from '@/lib/share'
-import { Kbd } from '@/components/ui/kbd'
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
-import { Image, Link, Share2 } from 'lucide-react'
 
 interface SidebarProps {
   children: React.ReactNode
   footer?: React.ReactNode
 }
 
-function SaveDesignButton() {
-  const [status, setStatus] = useState<'idle' | 'saved' | 'duplicate'>('idle')
-  const toolId = useLocation().pathname.slice(1)
-
-  useEffect(() => {
-    shortcutActions.save = () => {
-      const canvas = document.querySelector('canvas') as HTMLCanvasElement | null
-      if (!canvas || !toolId) return
-      const settings = shortcutActions.getSettings?.()
-      if (!settings) return
-      saveDesign(toolId, settings, canvas).then((result) => {
-        setStatus(result ? 'saved' : 'duplicate')
-        setTimeout(() => setStatus('idle'), 1500)
-        if (result) {
-          window.dispatchEvent(new CustomEvent('studio:designs-changed'))
-        }
-      })
-    }
-    return () => {
-      shortcutActions.save = null
-    }
-  }, [toolId])
-
-  const label =
-    status === 'saved' ? 'Saved!' : status === 'duplicate' ? 'Already saved' : null
-
-  return (
-    <button
-      type="button"
-      onClick={() => shortcutActions.save?.()}
-      className="flex h-7 w-full items-center justify-center gap-1.5 rounded-md text-xs text-text-muted hover:text-text-primary"
-    >
-      {label ?? <>Save Design <Kbd>S</Kbd></>}
-    </button>
-  )
-}
-
-function ShareButton() {
-  const [status, setStatus] = useState<'idle' | 'copied-image' | 'copied-link' | 'shared' | 'failed'>('idle')
-  const [open, setOpen] = useState(false)
-  const toolId = useLocation().pathname.slice(1)
-
-  useEffect(() => {
-    function onLinkCopied() {
-      setStatus('copied-link')
-      setTimeout(() => setStatus('idle'), 1500)
-    }
-    window.addEventListener('studio:link-copied', onLinkCopied)
-    return () => window.removeEventListener('studio:link-copied', onLinkCopied)
-  }, [])
-
-  useEffect(() => {
-    shortcutActions.copyImage = () => {
-      const canvas = document.querySelector('canvas') as HTMLCanvasElement | null
-      if (!canvas) return
-      copyImageToClipboard(canvas).then((ok) => {
-        setStatus(ok ? 'copied-image' : 'failed')
-        setTimeout(() => setStatus('idle'), 1500)
-      })
-    }
-    return () => { shortcutActions.copyImage = null }
-  }, [])
-
-  const handleCopyImage = () => {
-    shortcutActions.copyImage?.()
-    setTimeout(() => setOpen(false), 800)
-  }
-
-  const handleCopyLink = () => {
-    shortcutActions.copyLink?.()
-    setTimeout(() => setOpen(false), 800)
-  }
-
-  const handleNativeShare = () => {
-    const canvas = document.querySelector('canvas') as HTMLCanvasElement | null
-    if (!canvas) return
-    nativeShare(canvas, toolId || 'design').then((ok) => {
-      if (ok) {
-        setStatus('shared')
-        setTimeout(() => setStatus('idle'), 1500)
-      }
-    })
-    setOpen(false)
-  }
-
-  const itemClass = "flex h-7 w-full items-center gap-2 rounded px-2 text-xs text-text-secondary hover:bg-white/8 hover:text-text-primary"
-
-  const label =
-    status === 'copied-image' ? 'Image Copied!' :
-    status === 'copied-link' ? 'Link Copied!' :
-    status === 'shared' ? 'Shared!' :
-    status === 'failed' ? 'Failed' : null
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button type="button" className="flex h-7 w-full items-center justify-center gap-1.5 rounded-md text-xs text-text-muted hover:text-text-primary">
-          {label ?? 'Share'}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent side="top" className="w-44 p-1">
-        <button type="button" onClick={handleCopyImage} className={itemClass}>
-          <Image className="size-4 shrink-0" /> Copy Image
-        </button>
-        <button type="button" onClick={handleCopyLink} className={itemClass}>
-          <Link className="size-4 shrink-0" /> Copy Link <Kbd>C</Kbd>
-        </button>
-        {canNativeShare() && (
-          <button type="button" onClick={handleNativeShare} className={itemClass}>
-            <Share2 className="size-4 shrink-0" /> Share…
-          </button>
-        )}
-      </PopoverContent>
-    </Popover>
-  )
-}
-
 function SidebarInner({ children, footer }: SidebarProps) {
   return (
     <>
-      <div className="scrollbar-thin flex-1 overflow-y-auto p-4">
+      <div className="scrollbar-thin flex-1 overflow-y-auto p-5">
         {children}
       </div>
       {footer && (
-        <div className="shrink-0 border-t border-border-control p-4 pb-0">
+        <div className="shrink-0 border-t border-border-control/80 p-5 pb-0">
           {footer}
         </div>
       )}
-      <div className="shrink-0 px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <div className="flex gap-1">
-          <SaveDesignButton />
-          <ShareButton />
-        </div>
-      </div>
     </>
   )
 }
@@ -222,11 +92,11 @@ function MobileDrawer({ children, footer }: SidebarProps) {
     >
       {/* Drag handle */}
       <div
-        className="flex cursor-grab touch-none items-center justify-center py-2.5 active:cursor-grabbing [&:active_.drag-bar]:bg-[#666]"
+        className="flex cursor-grab touch-none items-center justify-center py-2.5 active:cursor-grabbing [&:active_.drag-bar]:bg-[#a98e75]"
         onTouchStart={(e) => onStart(e.touches[0].clientY)}
         onMouseDown={(e) => onStart(e.clientY)}
       >
-        <div className="drag-bar h-1 w-9 rounded-full bg-[#444] transition-colors" />
+        <div className="drag-bar h-1 w-9 rounded-full bg-[#b6a595] transition-colors" />
       </div>
       <SidebarInner footer={footer}>{children}</SidebarInner>
     </aside>
@@ -238,7 +108,7 @@ export function Sidebar({ children, footer }: SidebarProps) {
 
   if (!isMobile) {
     return (
-      <aside className="flex w-sidebar shrink-0 flex-col border-r border-border-control bg-sidebar">
+      <aside className="flex w-sidebar shrink-0 flex-col border-l border-border-control/80 bg-sidebar/80">
         <SidebarInner footer={footer}>{children}</SidebarInner>
       </aside>
     )

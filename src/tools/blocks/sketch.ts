@@ -8,6 +8,7 @@ export const PALETTES: Record<string, string[]> = {
   mondrian: ['#c92a2a', '#1862a8', '#f4d03f', '#ffffff', '#ffffff'],
   'neo-mondrian': ['#e63946', '#457b9d', '#f1c453', '#f1faee', '#a8dadc'],
   warm: ['#d64045', '#e8985e', '#f4d35e', '#fffffc', '#fffffc'],
+  hygge: ['#a65e2e', '#c76a3d', '#d69434', '#faf7f2', '#f0eae0'],
   cool: ['#264653', '#2a9d8f', '#e9c46a', '#f4f1de', '#f4f1de'],
   monochrome: ['#212529', '#495057', '#adb5bd', '#f8f9fa', '#ffffff'],
 }

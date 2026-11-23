@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import { normalizeSteppedValue } from "@/lib/math"
 import { Slider } from "@/components/ui/slider"
+import { useI18n } from "@/lib/i18n"
 
 interface SliderControlProps {
   label: string
@@ -23,6 +24,7 @@ export function SliderControl({
   unit,
   decimals = 0,
 }: SliderControlProps) {
+  const { t, isChinese } = useI18n()
   const [editing, setEditing] = useState(false)
   const [inputValue, setInputValue] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
@@ -44,12 +46,12 @@ export function SliderControl({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-text-secondary">{label}</span>
+        <span className="text-xs text-text-secondary">{t(label)}</span>
         {editing ? (
           <input
             ref={inputRef}
             type="text"
-            aria-label={`${label} value`}
+            aria-label={isChinese ? `${t(label)}数值` : `${label} value`}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => {
@@ -58,7 +60,7 @@ export function SliderControl({
             }}
             onBlur={commitValue}
             size={Math.max(inputValue.length, 1)}
-            className="bg-transparent text-right font-mono text-xs tabular-nums text-text-tertiary border-b border-text-tertiary/40 outline-none selection:bg-white/20 selection:text-text-tertiary"
+            className="bg-transparent text-right font-mono text-xs tabular-nums text-text-tertiary border-b border-text-tertiary/40 outline-none selection:bg-[#d4c8bb]/60 selection:text-text-primary"
             style={{ width: `${Math.max(inputValue.length, 1) + 1}ch` }}
           />
         ) : (

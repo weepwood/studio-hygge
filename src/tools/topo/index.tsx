@@ -10,10 +10,7 @@ import { Section } from '@/components/controls/section'
 import { SliderControl } from '@/components/controls/slider-control'
 import { SelectControl } from '@/components/controls/select-control'
 import { ColorControl } from '@/components/controls/color-control'
-import { ButtonRow } from '@/components/controls/button-row'
-import { Button } from '@/components/ui/button'
 import { useShortcutActions } from '@/hooks/use-shortcut-actions'
-import { Kbd } from '@/components/ui/kbd'
 import { CanvasSizeControl } from '@/components/controls/canvas-size-control'
 import type { CanvasPreset } from '@/lib/canvas-size'
 import { createTopoSketch } from './sketch'
@@ -30,10 +27,10 @@ const DEFAULTS: TopoSettings = {
   wobble: 0,
   roughness: 0,
   smoothing: 50,
-  bgColor: '#ffffff',
-  colorMode: 'single',
-  lineColor: '#222222',
-  palette: 'mono',
+  bgColor: '#faf7f2',
+  colorMode: 'palette',
+  lineColor: '#7d5b3a',
+  palette: 'hygge',
   opacity: 100,
   grain: 0,
   margin: 20,
@@ -55,9 +52,10 @@ function hslToHex(h: number, s: number, l: number): string {
 }
 
 function randomColor(): string {
-  const h = Math.floor(Math.random() * 360)
-  const s = Math.floor(Math.random() * 50 + 40)
-  const l = Math.floor(Math.random() * 40 + 20)
+  const hues = [22, 34, 42, 105, 142, 198]
+  const h = hues[Math.floor(Math.random() * hues.length)] + Math.floor(Math.random() * 17 - 8)
+  const s = Math.floor(Math.random() * 28 + 22)
+  const l = Math.floor(Math.random() * 32 + 28)
   return hslToHex(h, s, l)
 }
 
@@ -71,10 +69,16 @@ export default function Topo() {
   )
   const p5Ref = useP5(containerRef, sketchFn, settings)
   const hasRasterEffects = settings.grain > 0
-  useShortcutActions({ randomize, reset, download: hasRasterEffects ? handleExportPNG : handleExportSVG })
+  useShortcutActions({
+    randomize,
+    reset,
+    download: hasRasterEffects ? handleExportPNG : handleExportSVG,
+    exportPng: handleExportPNG,
+    exportSvg: handleExportSVG,
+  })
 
   function randomize() {
-    const paletteNames = ['mono', 'topo', 'ocean', 'earth', 'sunset', 'forest', 'heat']
+    const paletteNames = ['topo', 'earth', 'forest', 'hygge']
     let colorMode: TopoSettings['colorMode'] = 'single'
     let lineColor = settings.lineColor
     let palette = settings.palette
@@ -93,11 +97,10 @@ export default function Topo() {
 
     let bgColor: string
     if (Math.random() > 0.2) {
-      const lightness = Math.floor(Math.random() * 15 + 240)
-      bgColor = `#${lightness.toString(16).padStart(2, '0').repeat(3)}`
+      const backgrounds = ['#faf7f2', '#f7f2e7', '#f0eae0', '#ede6da']
+      bgColor = backgrounds[Math.floor(Math.random() * backgrounds.length)]
     } else {
-      const darkness = Math.floor(Math.random() * 30 + 20)
-      bgColor = `#${darkness.toString(16).padStart(2, '0').repeat(3)}`
+      bgColor = Math.random() > 0.5 ? '#5b3a29' : '#445243'
     }
 
     const hasTexture = Math.random() > 0.7
@@ -138,23 +141,7 @@ export default function Topo() {
 
   return (
     <>
-      <Sidebar footer={
-        <ButtonRow>
-          <Button variant="secondary" onClick={randomize}>Randomize <Kbd>R</Kbd></Button>
-          <Button variant="secondary" onClick={reset}>Reset <Kbd>⌫</Kbd></Button>
-          {hasRasterEffects ? (
-            <>
-              <Button variant="primary" onClick={handleExportPNG}>Export PNG <Kbd>⌘S</Kbd></Button>
-              <Button variant="secondary" onClick={handleExportSVG}>Export SVG</Button>
-            </>
-          ) : (
-            <>
-              <Button variant="primary" onClick={handleExportSVG}>Export SVG <Kbd>⌘S</Kbd></Button>
-              <Button variant="secondary" onClick={handleExportPNG}>Export PNG</Button>
-            </>
-          )}
-        </ButtonRow>
-      }>
+      <Sidebar>
         <h2 className="mb-3 text-base font-medium text-text-primary">Topo</h2>
 
         <Section title="Canvas">
@@ -283,6 +270,7 @@ export default function Topo() {
                 { value: 'earth', label: 'Earth' },
                 { value: 'sunset', label: 'Sunset' },
                 { value: 'forest', label: 'Forest' },
+                { value: 'hygge', label: 'Hygge' },
                 { value: 'heat', label: 'Heat' },
               ]}
               onChange={(v) => update({ palette: v })}

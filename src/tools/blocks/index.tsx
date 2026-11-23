@@ -10,10 +10,7 @@ import { Section } from '@/components/controls/section'
 import { SliderControl } from '@/components/controls/slider-control'
 import { SelectControl } from '@/components/controls/select-control'
 import { ColorControl } from '@/components/controls/color-control'
-import { ButtonRow } from '@/components/controls/button-row'
-import { Button } from '@/components/ui/button'
 import { useShortcutActions } from '@/hooks/use-shortcut-actions'
-import { Kbd } from '@/components/ui/kbd'
 import { CanvasSizeControl } from '@/components/controls/canvas-size-control'
 import type { CanvasPreset } from '@/lib/canvas-size'
 import { createBlocksSketch, PALETTES } from './sketch'
@@ -22,15 +19,15 @@ import type { BlocksSettings, BlocksGeometry } from './types'
 
 const DEFAULTS: BlocksSettings = {
   seed: 4242,
-  bgColor: '#f5f5f0',
+  bgColor: '#faf7f2',
   patternType: 'mondrian',
   blockCount: 6,
   complexity: 4,
   lineWeight: 0,
   rotation: 0,
-  palette: 'mondrian',
-  colors: ['#c92a2a', '#1862a8', '#f4d03f', '#ffffff', '#ffffff'],
-  lineColor: '#000000',
+  palette: 'hygge',
+  colors: [...PALETTES.hygge],
+  lineColor: '#5b3a29',
   canvasPreset: 'square',
   customWidth: 2048,
   customHeight: 2048,
@@ -56,7 +53,13 @@ export default function Blocks() {
   )
   const p5Ref = useP5(containerRef, sketchFn, settings)
   const hasRasterEffects = settings.texture > 0 || settings.grain > 0 || settings.halftone > 0
-  useShortcutActions({ randomize, reset, download: hasRasterEffects ? handleExportPNG : handleExportSVG })
+  useShortcutActions({
+    randomize,
+    reset,
+    download: hasRasterEffects ? handleExportPNG : handleExportSVG,
+    exportPng: handleExportPNG,
+    exportSvg: handleExportSVG,
+  })
 
   function handlePaletteChange(name: string) {
     if (name === 'custom') {
@@ -80,7 +83,7 @@ export default function Blocks() {
     const paletteNames = Object.keys(PALETTES)
     const palName = paletteNames[Math.floor(Math.random() * paletteNames.length)]
 
-    const bgColors = ['#f5f5f0', '#1a1a1a', '#0a0a0a', '#000000', '#2c2c2c', '#f0e6d3', '#e8e0d0']
+    const bgColors = ['#faf7f2', '#f7f2e7', '#f0eae0', '#ede6da', '#e6d5c1']
     update({
       seed: Math.floor(Math.random() * 99999),
       bgColor: bgColors[Math.floor(Math.random() * bgColors.length)],
@@ -117,23 +120,7 @@ export default function Blocks() {
 
   return (
     <>
-      <Sidebar footer={
-        <ButtonRow>
-          <Button variant="secondary" onClick={randomize}>Randomize <Kbd>R</Kbd></Button>
-          <Button variant="secondary" onClick={reset}>Reset <Kbd>⌫</Kbd></Button>
-          {hasRasterEffects ? (
-            <>
-              <Button variant="primary" onClick={handleExportPNG}>Export PNG <Kbd>⌘S</Kbd></Button>
-              <Button variant="secondary" onClick={handleExportSVG}>Export SVG</Button>
-            </>
-          ) : (
-            <>
-              <Button variant="primary" onClick={handleExportSVG}>Export SVG <Kbd>⌘S</Kbd></Button>
-              <Button variant="secondary" onClick={handleExportPNG}>Export PNG</Button>
-            </>
-          )}
-        </ButtonRow>
-      }>
+      <Sidebar>
         <h2 className="mb-3 text-base font-medium text-text-primary">Blocks</h2>
 
         <Section title="Canvas">

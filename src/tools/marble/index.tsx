@@ -6,10 +6,7 @@ import { Section } from "@/components/controls/section"
 import { SliderControl } from "@/components/controls/slider-control"
 import { SwitchControl } from "@/components/controls/switch-control"
 import { ColorControl } from "@/components/controls/color-control"
-import { ButtonRow } from "@/components/controls/button-row"
-import { Button } from "@/components/ui/button"
 import { useShortcutActions } from "@/hooks/use-shortcut-actions"
-import { Kbd } from "@/components/ui/kbd"
 import { exportPNG, generateFilename, createRecorder, type Recorder } from "@/lib/export"
 import { CanvasSizeControl } from "@/components/controls/canvas-size-control"
 import type { CanvasPreset } from "@/lib/canvas-size"
@@ -49,6 +46,10 @@ export default function Marble() {
   useEffect(() => {
     engineRef.current?.requestRender()
   }, [settings])
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("studio:actions-changed", { detail: { isRecording } }))
+  }, [isRecording])
 
   // Resize canvas when size settings change
   useEffect(() => {
@@ -125,28 +126,11 @@ export default function Marble() {
     }
   }
 
-  useShortcutActions({ randomize, reset, download })
+  useShortcutActions({ randomize, reset, download, toggleRecording })
 
   return (
     <>
-      <Sidebar
-        footer={
-          <ButtonRow>
-            <Button variant="secondary" onClick={randomize}>
-              Randomize <Kbd>R</Kbd>
-            </Button>
-            <Button variant="secondary" onClick={reset}>
-              Reset <Kbd>⌫</Kbd>
-            </Button>
-            <Button variant="primary" onClick={download}>
-              Export PNG <Kbd>⌘S</Kbd>
-            </Button>
-            <Button variant="secondary" onClick={toggleRecording}>
-              {isRecording ? "Stop Recording" : "Record MP4"}
-            </Button>
-          </ButtonRow>
-        }
-      >
+      <Sidebar>
         <h2 className="mb-3 text-base font-medium text-text-primary">Marble</h2>
         <div className="flex flex-col gap-4">
           <Section title="Canvas">

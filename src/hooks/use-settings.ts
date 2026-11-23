@@ -1,10 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { shortcutActions } from "@/lib/shortcut-actions";
-import {
-  settingsFromBase64Url,
-  settingsToBase64Url,
-  settingsToDiff,
-} from "@/lib/url-settings";
+import { settingsFromBase64Url } from "@/lib/url-settings";
 
 /**
  * Persist tool settings to localStorage with debounced writes.
@@ -18,8 +14,6 @@ export function useSettings<T extends Record<string, unknown>>(
   defaults: T,
 ): [T, (patch: Partial<T>) => void, () => void] {
   const storageKey = `studio:${key}`;
-  const defaultsRef = useRef(defaults);
-
   const [settings, setSettings] = useState<T>(() => {
     // Priority: URL params > localStorage > defaults
     const urlParams = new URLSearchParams(window.location.search);
@@ -92,29 +86,13 @@ export function useSettings<T extends Record<string, unknown>>(
     return flushPendingWrite;
   }, [flushPendingWrite]);
 
-  // Register copyLink shortcut action
+  // Register the current settings getter for saving designs.
   useEffect(() => {
-    shortcutActions.copyLink = () => {
-      try {
-        flushPendingWrite();
-        const current = latestRef.current as Record<string, unknown>;
-        const diff = settingsToDiff(current, defaultsRef.current);
-        const hasChanges = Object.keys(diff).length > 0;
-        const url = hasChanges
-          ? `${window.location.origin}/${key}?s=${settingsToBase64Url(diff)}`
-          : `${window.location.origin}/${key}`;
-        navigator.clipboard.writeText(url);
-        window.dispatchEvent(new CustomEvent("studio:link-copied"));
-      } catch {
-        // clipboard or encoding failure — silently ignore
-      }
-    };
     shortcutActions.getSettings = () => {
       flushPendingWrite();
       return latestRef.current;
     };
     return () => {
-      shortcutActions.copyLink = null;
       shortcutActions.getSettings = null;
     };
   }, [flushPendingWrite, key]);

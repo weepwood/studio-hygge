@@ -42,13 +42,14 @@ export function randomizeColors(): {
   colorMid: string
   colorHigh: string
 } {
-  const baseHue = Math.random() * 360
-  const sat = Math.random() * 40 + 60
+  const naturalHues = [22, 34, 42, 105, 142, 198]
+  const baseHue = naturalHues[Math.floor(Math.random() * naturalHues.length)] + Math.random() * 14 - 7
+  const sat = Math.random() * 22 + 24
   return {
-    colorMain: hslToHex(baseHue, sat, Math.random() * 20 + 70),
-    colorLow: hslToHex((baseHue + Math.random() * 30 - 15) % 360, sat, Math.random() * 30 + 40),
-    colorMid: hslToHex((baseHue + 120 + Math.random() * 30 - 15) % 360, sat, Math.random() * 20 + 50),
-    colorHigh: hslToHex((baseHue + 240 + Math.random() * 30 - 15) % 360, Math.random() * 20 + 10, Math.random() * 15 + 85),
+    colorMain: hslToHex(baseHue, sat, Math.random() * 14 + 70),
+    colorLow: hslToHex((baseHue - 12 + 360) % 360, sat + 5, Math.random() * 16 + 40),
+    colorMid: hslToHex((baseHue + 12) % 360, sat, Math.random() * 14 + 53),
+    colorHigh: hslToHex((baseHue + 24) % 360, Math.max(10, sat - 12), Math.random() * 8 + 86),
   }
 }
 
@@ -56,7 +57,10 @@ export const DEFAULTS: MarbleSettings = {
   canvasPreset: "square",
   customWidth: 800,
   customHeight: 800,
-  ...randomizeColors(),
+  colorMain: "#7d5b3a",
+  colorLow: "#b7c9b2",
+  colorMid: "#d69434",
+  colorHigh: "#faf7f2",
   noiseScale: 1.25,
   windSpeed: 0.12,
   warpPower: 0.35,
@@ -70,5 +74,5 @@ export const DEFAULTS: MarbleSettings = {
   grain: 0,
   veinIntensity: 0,
   veinScale: 3.0,
-  veinColor: "#1a1a2e",
+  veinColor: "#5b3a29",
 }

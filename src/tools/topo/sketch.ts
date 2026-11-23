@@ -13,6 +13,7 @@ export const PALETTES: Record<string, string[]> = {
   earth: ['#606c38', '#283618', '#fefae0', '#dda15e', '#bc6c25'],
   sunset: ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff'],
   forest: ['#1b4332', '#2d6a4f', '#40916c', '#52b788', '#74c69d'],
+  hygge: ['#7d5b3a', '#a65e2e', '#d69434', '#b7c9b2', '#faf7f2'],
   heat: ['#03071e', '#370617', '#6a040f', '#d00000', '#dc2f02', '#e85d04', '#f48c06', '#faa307', '#ffba08'],
 }
 

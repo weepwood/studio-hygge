@@ -5,6 +5,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select"
+import { useI18n } from "@/lib/i18n"
 
 interface SelectControlProps {
   label: string
@@ -19,9 +20,10 @@ export function SelectControl({
   options,
   onChange,
 }: SelectControlProps) {
+  const { t } = useI18n()
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs text-text-secondary">{label}</span>
+      <span className="text-xs text-text-secondary">{t(label)}</span>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger className="w-[150px]">
           <SelectValue />
@@ -29,7 +31,7 @@ export function SelectControl({
         <SelectContent>
           {options.map((opt) => (
             <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
+              {t(opt.label)}
             </SelectItem>
           ))}
         </SelectContent>

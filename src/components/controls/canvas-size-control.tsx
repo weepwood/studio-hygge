@@ -1,6 +1,7 @@
 import { SelectControl } from './select-control'
 import { SliderControl } from './slider-control'
 import { CANVAS_PRESET_OPTIONS, type CanvasPreset } from '@/lib/canvas-size'
+import { useI18n } from '@/lib/i18n'
 
 interface CanvasSizeControlProps {
   preset: CanvasPreset
@@ -19,12 +20,13 @@ export function CanvasSizeControl({
   onWidthChange,
   onHeightChange,
 }: CanvasSizeControlProps) {
+  const { t } = useI18n()
   return (
     <>
       <SelectControl
         label="Canvas Size"
         value={preset}
-        options={CANVAS_PRESET_OPTIONS}
+        options={CANVAS_PRESET_OPTIONS.map((option) => ({ ...option, label: t(option.label) }))}
         onChange={(v) => onPresetChange(v as CanvasPreset)}
       />
       {preset === 'custom' && (

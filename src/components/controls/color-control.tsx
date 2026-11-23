@@ -1,4 +1,5 @@
 import { HexColorPicker } from "react-colorful"
+import { useI18n } from "@/lib/i18n"
 import {
   Popover,
   PopoverTrigger,
@@ -12,14 +13,15 @@ interface ColorControlProps {
 }
 
 export function ColorControl({ label, value, onChange }: ColorControlProps) {
+  const { t, isChinese } = useI18n()
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs text-text-secondary">{label}</span>
+      <span className="text-xs text-text-secondary">{t(label)}</span>
       <Popover>
         <PopoverTrigger asChild>
           <button
             type="button"
-            aria-label={`Pick ${label} color`}
+            aria-label={isChinese ? `选择${t(label)}颜色` : `Pick ${label} color`}
             className="h-7 w-7 shrink-0 cursor-pointer rounded-md border border-border-control"
             style={{ backgroundColor: value }}
           />
@@ -28,7 +30,7 @@ export function ColorControl({ label, value, onChange }: ColorControlProps) {
           <HexColorPicker color={value} onChange={onChange} />
           <input
             type="text"
-            aria-label={`${label} hex color`}
+            aria-label={isChinese ? `${t(label)}十六进制颜色值` : `${label} hex color`}
             value={value}
             onChange={(e) => {
               const v = e.target.value

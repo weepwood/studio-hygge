@@ -33,11 +33,6 @@ export function useKeyboardShortcuts() {
         return
       }
 
-      if (e.key === 'c' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        shortcutActions.copyLink?.()
-        return
-      }
-
       if (e.key === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         shortcutActions.randomize?.()
         return

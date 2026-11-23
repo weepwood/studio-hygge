@@ -1,96 +1,177 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { NavLink, useLocation } from "react-router-dom"
-import { Bookmark } from "lucide-react"
-import { tools, pages } from "@/tools/registry"
+import { BookmarkCheck, BookmarkPlus, Dices, Download, FileImage, Image, RotateCcw, Video } from "lucide-react"
+import { tools } from "@/tools/registry"
 import { ToolIcon } from "@/components/icons"
 import { useMobile } from "@/hooks/use-mobile"
 import { SavedDesignsPanel } from "@/components/saved-designs-panel"
+import { shortcutActions } from "@/lib/shortcut-actions"
+import { useI18n } from "@/lib/i18n"
+import { Kbd } from "@/components/ui/kbd"
+import { saveDesign } from "@/lib/saved-designs"
+import { copyImageToClipboard } from "@/lib/share"
+
+function ActionButton({
+  icon,
+  label,
+  shortcut,
+  onClick,
+}: {
+  icon: React.ReactNode
+  label: string
+  shortcut?: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-9 w-full items-center gap-2.5 rounded-xl px-2.5 text-left text-xs text-text-secondary transition-colors hover:bg-[#e6d5c1]/55 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-hygge-rust"
+    >
+      <span className="flex size-5 shrink-0 items-center justify-center text-hygge-rust">{icon}</span>
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {shortcut && <Kbd>{shortcut}</Kbd>}
+    </button>
+  )
+}
 
 export function ToolSwitcher() {
   const isMobile = useMobile()
   const [open, setOpen] = useState(false)
   const [savedOpen, setSavedOpen] = useState(false)
   const [bounce, setBounce] = useState(false)
-  const savedBtnRef = useRef<HTMLButtonElement>(null)
+  const [isRecording, setIsRecording] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "duplicate">("idle")
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle")
   const currentToolId = useLocation().pathname.slice(1)
-  const currentTool = [...tools, ...pages].find((t) => t.id === currentToolId) ?? tools[0]
+  const currentTool = tools.find((tool) => tool.id === currentToolId) ?? tools[0]
+  const isMarble = currentTool.id === "marble"
+  const { t } = useI18n()
 
-  // Animate bookmark icon when a design is saved
   useEffect(() => {
-    const handler = () => {
+    const onDesignsChanged = () => {
       setBounce(true)
       setTimeout(() => setBounce(false), 600)
     }
-    window.addEventListener('studio:designs-changed', handler)
-    return () => window.removeEventListener('studio:designs-changed', handler)
+    const onActionsChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ isRecording: boolean }>).detail
+      if (detail) setIsRecording(detail.isRecording)
+    }
+    window.addEventListener("studio:designs-changed", onDesignsChanged)
+    window.addEventListener("studio:actions-changed", onActionsChanged)
+    return () => {
+      window.removeEventListener("studio:designs-changed", onDesignsChanged)
+      window.removeEventListener("studio:actions-changed", onActionsChanged)
+    }
   }, [])
+
+  useEffect(() => {
+    shortcutActions.save = () => {
+      const canvas = document.querySelector("canvas") as HTMLCanvasElement | null
+      const settings = shortcutActions.getSettings?.()
+      if (!canvas || !settings) return
+      saveDesign(currentTool.id, settings, canvas).then((saved) => {
+        setSaveStatus(saved ? "saved" : "duplicate")
+        setTimeout(() => setSaveStatus("idle"), 1500)
+        if (saved) window.dispatchEvent(new CustomEvent("studio:designs-changed"))
+      })
+    }
+    return () => {
+      shortcutActions.save = null
+    }
+  }, [currentTool.id])
+
+  const handleCopyImage = async () => {
+    const canvas = document.querySelector("canvas") as HTMLCanvasElement | null
+    if (!canvas) return
+    const copied = await copyImageToClipboard(canvas)
+    setCopyStatus(copied ? "copied" : "failed")
+    setTimeout(() => setCopyStatus("idle"), 1500)
+  }
+
+  const actions = (
+    <div className="space-y-2.5">
+      <div className="space-y-0.5">
+        <ActionButton icon={<Dices className="size-4" />} label={t("Randomize")} shortcut="R" onClick={() => shortcutActions.randomize?.()} />
+        <ActionButton icon={<RotateCcw className="size-4" />} label={t("Reset")} shortcut="⌫" onClick={() => shortcutActions.reset?.()} />
+      </div>
+      <div className="space-y-0.5 border-t border-border-control/70 pt-2">
+        <ActionButton icon={<Image className="size-4" />} label={t(copyStatus === "copied" ? "Image Copied!" : copyStatus === "failed" ? "Failed" : "Copy Image")} onClick={handleCopyImage} />
+        <ActionButton
+          icon={<Download className="size-4" />}
+          label={t("Export PNG")}
+          shortcut="⌘S"
+          onClick={() => {
+            if (shortcutActions.exportPng) shortcutActions.exportPng()
+            else shortcutActions.download?.()
+          }}
+        />
+        {isMarble ? (
+          <ActionButton
+            icon={<Video className="size-4" />}
+            label={t(isRecording ? "Stop Recording" : "Record MP4")}
+            onClick={() => shortcutActions.toggleRecording?.()}
+          />
+        ) : (
+          <ActionButton icon={<FileImage className="size-4" />} label={t("Export SVG")} onClick={() => shortcutActions.exportSvg?.()} />
+        )}
+      </div>
+      <div className="space-y-0.5 border-t border-border-control/70 pt-2">
+        <ActionButton
+          icon={<BookmarkPlus className="size-4" />}
+          label={t(saveStatus === "saved" ? "Saved!" : saveStatus === "duplicate" ? "Already saved" : "Save Design")}
+          shortcut={saveStatus === "idle" ? "S" : undefined}
+          onClick={() => shortcutActions.save?.()}
+        />
+        <ActionButton
+          icon={<BookmarkCheck className="size-4" fill={bounce ? "currentColor" : "none"} />}
+          label={t("Saved")}
+          onClick={() => setSavedOpen(true)}
+        />
+      </div>
+    </div>
+  )
 
   if (isMobile) {
     return (
       <>
-        {/* Floating tool button */}
         <button
           type="button"
           onClick={() => setOpen(!open)}
-          className="fixed top-3 left-3 z-40 flex h-9 w-9 items-center justify-center rounded-lg border border-border-control bg-sidebar"
-          aria-label="Switch tool"
+          className="fixed left-3 top-3 z-40 flex h-10 w-10 items-center justify-center rounded-xl border border-border-control bg-surface-elevated text-hygge-rust shadow-sm"
+          aria-label={t("Switch tool")}
         >
           <ToolIcon tool={currentTool.id} className="h-6 w-6" />
         </button>
-
-        {/* Floating saved button */}
-        <button
-          type="button"
-          onClick={() => setSavedOpen(true)}
-          className={`fixed top-3 left-14 z-40 flex h-9 w-9 items-center justify-center rounded-lg border border-border-control bg-sidebar ${
-            bounce ? "text-yellow-400 scale-150" : "text-text-muted"
-          }`}
-          style={bounce ? { transition: 'all 300ms cubic-bezier(0.34, 1.56, 0.64, 1)' } : undefined}
-          aria-label="Saved designs"
-        >
-          <Bookmark className="size-4 shrink-0" fill={bounce ? 'currentColor' : 'none'} />
-        </button>
         <SavedDesignsPanel open={savedOpen} onOpenChange={setSavedOpen} />
-
-        {/* Tool picker overlay */}
         {open && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-            <div className="fixed top-14 left-3 z-50 grid grid-cols-4 gap-2 rounded-lg border border-border-control bg-sidebar p-2">
-              {[...tools, ...pages].map((tool) => (
-                <NavLink
-                  key={tool.id}
-                  to={`/${tool.id}`}
-                  onClick={() => {
-                    if (tools.some((t) => t.id === tool.id)) {
+            <div className="fixed left-3 top-16 z-50 w-60 rounded-2xl border border-border-control bg-surface-elevated p-3 shadow-xl">
+              <div className="grid grid-cols-3 gap-2">
+                {tools.map((tool) => (
+                  <NavLink
+                    key={tool.id}
+                    to={`/${tool.id}`}
+                    onClick={() => {
                       localStorage.setItem("studio:last-tool", tool.id)
-                    }
-                    setOpen(false)
-                  }}
-                  className="flex flex-col items-center gap-0.5 rounded-md p-1.5"
-                >
-                  {({ isActive }) => (
-                    <>
-                      <div
-                        className={`rounded-lg p-0.5 transition-[transform,opacity] duration-150 ${
-                          isActive
-                            ? "bg-white/10 ring-1 ring-white/20"
-                            : "grayscale brightness-50"
-                        }`}
-                      >
-                        <ToolIcon tool={tool.id} />
-                      </div>
-                      <span
-                        className={`text-[8px] leading-none ${
-                          isActive ? "text-white" : "text-text-muted"
-                        }`}
-                      >
-                        {tool.name}
-                      </span>
-                    </>
-                  )}
-                </NavLink>
-              ))}
+                      setOpen(false)
+                    }}
+                    className="flex flex-col items-center gap-1 rounded-lg p-1.5"
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <span className={`rounded-[9px] ${isActive ? "bg-[#e6d5c1]/70 ring-1 ring-inset ring-border-control" : "opacity-65"}`}>
+                          <ToolIcon tool={tool.id} />
+                        </span>
+                        <span className={`text-[9px] ${isActive ? "text-text-primary" : "text-text-tertiary"}`}>{tool.name}</span>
+                      </>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+              <div className="my-2 border-t border-border-control/80" />
+              {actions}
             </div>
           </>
         )}
@@ -99,85 +180,40 @@ export function ToolSwitcher() {
   }
 
   return (
-    <nav className="scrollbar-thin flex w-toolbar shrink-0 flex-col items-center gap-3 overflow-y-auto border-r border-border-control bg-sidebar py-3">
-      {tools.map((tool) => (
-        <NavLink
-          key={tool.id}
-          to={`/${tool.id}`}
-          onClick={() =>
-            localStorage.setItem("studio:last-tool", tool.id)
-          }
-          className="relative flex flex-col items-center gap-1.5"
-        >
-          {({ isActive }) => (
-            <>
-              <div
-                className={`rounded-lg p-0.5 transition-[transform,opacity] duration-150 ${
-                  isActive
-                    ? "bg-white/10 ring-1 ring-white/20"
-                    : "grayscale brightness-50 hover:brightness-75 hover:grayscale-50"
-                }`}
-              >
-                <ToolIcon tool={tool.id} />
-              </div>
-              <span
-                className={`text-[9px] leading-none ${
-                  isActive ? "text-white" : "text-text-muted"
-                }`}
-              >
-                {tool.name}
-              </span>
-            </>
-          )}
+    <>
+      <nav className="scrollbar-thin flex w-toolbar shrink-0 flex-col items-stretch overflow-y-auto border-r border-border-control/80 bg-sidebar/90 px-3 py-4">
+        <NavLink to="/" aria-label={t("Studio home")} className="mb-3 flex items-center gap-3 rounded-xl px-2 py-2 text-hygge-rust transition-colors hover:bg-[#e6d5c1]/45">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#7d5b3a] font-serif text-lg text-[#faf7f2]">S</span>
+          <span className="font-serif text-lg text-text-primary">Studio</span>
         </NavLink>
-      ))}
-      <div className="mt-auto" />
-      <button
-        type="button"
-        ref={savedBtnRef}
-        onClick={() => setSavedOpen(true)}
-        className="flex flex-col items-center gap-1.5"
-        aria-label="Saved designs"
-      >
-        <div
-          className={`rounded-lg p-1 transition-[transform,opacity] duration-150 ${
-            bounce ? "text-yellow-400 scale-150" : "text-text-muted hover:text-text-secondary"
-          }`}
-          style={bounce ? { transition: 'all 300ms cubic-bezier(0.34, 1.56, 0.64, 1)' } : undefined}
-        >
-          <Bookmark className="h-5 w-5" fill={bounce ? 'currentColor' : 'none'} />
+        <div className="my-4 border-t border-border-control/80" />
+        <div className="space-y-1">
+          {tools.map((tool) => (
+            <NavLink
+              key={tool.id}
+              to={`/${tool.id}`}
+              onClick={() => localStorage.setItem("studio:last-tool", tool.id)}
+              className="flex items-center gap-3 rounded-xl px-2.5 py-2 transition-colors hover:bg-[#e6d5c1]/35"
+            >
+              {({ isActive }) => (
+                <>
+                  <span className={`size-[30px] shrink-0 rounded-[9px] ${isActive ? "bg-[#e6d5c1]/75 ring-1 ring-inset ring-border-control" : "opacity-70 hover:opacity-100"}`}>
+                    <ToolIcon tool={tool.id} />
+                  </span>
+                  <span className={`text-xs ${isActive ? "font-medium text-text-primary" : "text-text-secondary"}`}>{tool.name}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
         </div>
-        <span className={`text-[9px] leading-none ${bounce ? "text-yellow-400" : "text-text-muted"}`}>Saved</span>
-      </button>
-      {pages.map((page) => (
-        <NavLink
-          key={page.id}
-          to={`/${page.id}`}
-          className="relative flex flex-col items-center gap-1.5"
-        >
-          {({ isActive }) => (
-            <>
-              <div
-                className={`rounded-lg p-0.5 transition-[transform,opacity] duration-150 ${
-                  isActive
-                    ? "bg-white/10 ring-1 ring-white/20"
-                    : "grayscale brightness-50 hover:brightness-75 hover:grayscale-50"
-                }`}
-              >
-                <ToolIcon tool={page.id} />
-              </div>
-              <span
-                className={`text-[9px] leading-none ${
-                  isActive ? "text-white" : "text-text-muted"
-                }`}
-              >
-                {page.name}
-              </span>
-            </>
-          )}
-        </NavLink>
-      ))}
+
+        <div className="mt-auto pt-4">
+          <div className="border-t border-border-control/80 pt-3">
+            {actions}
+          </div>
+        </div>
+      </nav>
       <SavedDesignsPanel open={savedOpen} onOpenChange={setSavedOpen} />
-    </nav>
+    </>
   )
 }

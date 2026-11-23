@@ -1,132 +1,90 @@
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { ArrowUpRight, Sparkles } from "lucide-react"
 import { tools } from "@/tools/registry"
-import { ToolIcon } from "@/components/icons"
 import { useFavicon } from "@/hooks/use-favicon"
+import { useI18n } from "@/lib/i18n"
+import { LanguageToggle } from "@/components/language-toggle"
 
-/** Animated dot grid background */
-function DotGrid() {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-
-    let animId: number
-    const spacing = 28
-    const baseRadius = 1.2
-    const mouse = { x: -1000, y: -1000 }
-
-    function resize() {
-      const dpr = window.devicePixelRatio || 1
-      canvas!.width = window.innerWidth * dpr
-      canvas!.height = window.innerHeight * dpr
-      canvas!.style.width = `${window.innerWidth}px`
-      canvas!.style.height = `${window.innerHeight}px`
-      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0)
-    }
-
-    function draw() {
-      ctx!.clearRect(0, 0, window.innerWidth, window.innerHeight)
-
-      const cols = Math.ceil(window.innerWidth / spacing) + 1
-      const rows = Math.ceil(window.innerHeight / spacing) + 1
-
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const x = c * spacing
-          const y = r * spacing
-          const dx = mouse.x - x
-          const dy = mouse.y - y
-          const dist = Math.sqrt(dx * dx + dy * dy)
-          const influence = Math.max(0, 1 - dist / 150)
-          const radius = baseRadius + influence * 2.5
-          const alpha = 0.12 + influence * 0.5
-
-          ctx!.beginPath()
-          ctx!.arc(x, y, radius, 0, Math.PI * 2)
-          ctx!.fillStyle = `rgba(255, 255, 255, ${alpha})`
-          ctx!.fill()
-        }
-      }
-
-      animId = requestAnimationFrame(draw)
-    }
-
-    function onMouseMove(e: MouseEvent) {
-      mouse.x = e.clientX
-      mouse.y = e.clientY
-    }
-
-    resize()
-    window.addEventListener("resize", resize)
-    window.addEventListener("mousemove", onMouseMove)
-    draw()
-
-    return () => {
-      cancelAnimationFrame(animId)
-      window.removeEventListener("resize", resize)
-      window.removeEventListener("mousemove", onMouseMove)
-    }
-  }, [])
-
-  return (
-    <canvas
-      ref={canvasRef}
-      className="pointer-events-none absolute inset-0"
-    />
-  )
+const previews: Record<string, { image: string; note: string; number: string }> = {
+  topo: { image: "/topo.jpg", note: "Contours & quiet landscapes", number: "01" },
+  blocks: { image: "/blocks.jpg", note: "A little order, a little chance", number: "02" },
+  marble: { image: "/marble.jpg", note: "Fluid color, softly layered", number: "03" },
 }
 
 export default function Home() {
   const navigate = useNavigate()
+  const { t, isChinese } = useI18n()
   useFavicon("home")
 
   useEffect(() => {
-    document.title = "Studio — Generative Design Tools"
-  }, [])
+    document.title = isChinese ? "Studio — 慢慢创作生成艺术" : "Studio — Generative art, at an unhurried pace"
+  }, [isChinese])
 
   return (
-    <div
-      className="relative flex h-screen flex-col items-center justify-center overflow-hidden bg-canvas"
-    >
-      <DotGrid />
-
-      <div className="relative z-10 flex flex-col items-center gap-8">
-        {/* Logo / Title */}
-        <div className="flex flex-col items-center">
-          <h1 className="text-[2.5rem] font-semibold tracking-tight text-text-primary">
-            Studio
+    <main className="warm-stage flex min-h-svh flex-1 items-center justify-center overflow-y-auto px-5 py-12 md:px-10">
+      <LanguageToggle />
+      <div className="relative z-10 w-full max-w-6xl">
+        <header className="mx-auto mb-12 max-w-2xl text-center md:mb-16">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border-control bg-surface-elevated/70 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[.16em] text-hygge-rust">
+            <Sparkles className="size-3.5" strokeWidth={1.6} />
+            {t("A small creative nook")}
+          </div>
+          <h1 className="font-serif text-5xl font-normal tracking-[-.04em] text-text-primary sm:text-6xl md:text-7xl">
+            Studio<span className="italic text-hygge-rust">.</span>
           </h1>
-          <p className="text-sm text-text-secondary">
-            Generative design tools
+          <p className="mx-auto mt-5 max-w-lg text-sm leading-7 text-text-secondary sm:text-base">
+            {t("Generative art for slower moments. Choose a starting point, find a rhythm, and make something that feels like yours.")}
           </p>
-        </div>
+        </header>
 
-        {/* Tool grid */}
-        <div className="grid grid-cols-4 gap-4 px-6 lg:flex lg:gap-6 lg:px-0">
-          {tools.map((tool) => (
-            <button
-              key={tool.id}
-              onClick={(e) => {
-                e.stopPropagation()
-                localStorage.setItem("studio:last-tool", tool.id)
-                navigate(`/${tool.id}`)
-              }}
-              className="group flex cursor-pointer flex-col items-center gap-2 rounded-lg p-2 transition-all duration-150 hover:bg-white/15 lg:gap-3 lg:p-3"
-            >
-              <div className="transition-transform duration-150 group-hover:scale-110">
-                <ToolIcon tool={tool.id} className="h-10 w-10 lg:h-14 lg:w-14" />
-              </div>
-              <span className="text-[10px] text-text-muted group-hover:text-text-secondary lg:text-xs">
-                {tool.name}
-              </span>
-            </button>
-          ))}
-        </div>      </div>
-    </div>
+        <section aria-label={t("Choose an effect")} className="grid gap-5 md:grid-cols-3 md:gap-6">
+          {tools.map((tool) => {
+            const preview = previews[tool.id]
+            if (!preview) return null
+
+            return (
+              <button
+                key={tool.id}
+                type="button"
+                onClick={() => {
+                  localStorage.setItem("studio:last-tool", tool.id)
+                  navigate(`/${tool.id}`)
+                }}
+                className="warm-card group overflow-hidden rounded-[1.35rem] border border-border-control/80 bg-surface-elevated text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+              >
+                <div className="relative aspect-[1.28/1] overflow-hidden bg-hygge-oat">
+                  <img
+                    src={preview.image}
+                    alt={isChinese ? `${tool.name} 效果预览` : `${tool.name} generative art preview`}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.035]"
+                    draggable={false}
+                  />
+                  <span className="absolute left-4 top-4 rounded-full bg-[#faf7f2]/85 px-2.5 py-1 text-[10px] tracking-[.14em] text-text-secondary backdrop-blur-sm">
+                    {preview.number}
+                  </span>
+                  <span className="absolute bottom-4 right-4 flex size-9 items-center justify-center rounded-full border border-white/60 bg-[#faf7f2]/80 text-hygge-rust opacity-0 shadow-sm transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100">
+                    <ArrowUpRight className="size-4" />
+                  </span>
+                </div>
+                <div className="flex items-end justify-between gap-4 px-5 py-4 md:px-6 md:py-5">
+                  <div>
+                    <h2 className="font-serif text-2xl font-normal tracking-[-.02em] text-text-primary">{tool.name}</h2>
+                    <p className="mt-1.5 text-xs leading-5 text-text-tertiary">{t(preview.note)}</p>
+                  </div>
+                  <span className="mb-1 text-[10px] uppercase tracking-[.16em] text-hygge-sage">{t("Explore")}</span>
+                </div>
+              </button>
+            )
+          })}
+        </section>
+
+        <footer className="mt-10 flex items-center justify-center gap-2 text-[11px] tracking-wide text-text-tertiary md:mt-14">
+          <span className="h-px w-7 bg-border-control" />
+          {t("Made for making, at your own pace")}
+          <span className="h-px w-7 bg-border-control" />
+        </footer>
+      </div>
+    </main>
   )
 }

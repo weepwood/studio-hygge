@@ -13,14 +13,13 @@ const PATTERN = [
 ]
 
 const palettes: Record<string, [string, string, string, string]> = {
-  topo:        ["#1a4028", "#2d6b42", "#5a9e6f", "#8fd4a4"],
-  blocks:      ["#1a2740", "#2d4a7a", "#5a7db5", "#8fb4e0"],
+  home:         ["#5b3a29", "#7d5b3a", "#a65e2e", "#d69434"],
+  topo:        ["#5b3a29", "#7d5b3a", "#a65e2e", "#d69434"],
+  blocks:      ["#6b7f5e", "#7d5b3a", "#a65e2e", "#d69434"],
   organic:     ["#402a1a", "#7a4a2d", "#b57a4a", "#e0ac7a"],
   dither:      ["#0f380f", "#306230", "#8bac0f", "#9bbc0f"],
-  gradients:   ["#2d1a40", "#5a2d7a", "#8b5ab5", "#bc8fe0"],
   plotter:     ["#1a1a33", "#2d2d66", "#5a5a99", "#8b8bcc"],
-  ascii:       ["#40351a", "#7a6a2d", "#b5a15a", "#e0d08f"],
-  lines:       ["#1a3340", "#2d5c6b", "#5a8f9e", "#8fc2d1"],
+  marble:      ["#5b3a29", "#7d5b3a", "#a65e2e", "#d69434"],
 }
 
 function hslToHex(h: number, s: number, l: number): string {
