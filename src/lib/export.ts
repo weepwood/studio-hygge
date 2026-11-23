@@ -45,6 +45,7 @@ export interface Recorder {
   start: () => void;
   addFrame: (canvas: HTMLCanvasElement | OffscreenCanvas) => void;
   stop: () => Promise<Blob>;
+  cancel: () => void;
 }
 
 /**
@@ -69,6 +70,7 @@ export function createRecorder(
   let encoder: VideoEncoder;
   let frameCount = 0;
   let lastFrameTime = 0;
+  let stopped = false;
   const frameInterval = 1000 / fps;
 
   // Downscaling support
@@ -81,6 +83,7 @@ export function createRecorder(
 
   return {
     start() {
+      stopped = false;
       muxer = new Muxer({
         target: new ArrayBufferTarget(),
         video: {
@@ -116,6 +119,7 @@ export function createRecorder(
     },
 
     addFrame(canvas: HTMLCanvasElement | OffscreenCanvas) {
+      if (stopped || encoder.state !== "configured") return;
       // Throttle to target fps
       const now = performance.now();
       if (lastFrameTime && now - lastFrameTime < frameInterval) return;
@@ -141,13 +145,15 @@ export function createRecorder(
     },
 
     async stop(): Promise<Blob> {
+      if (stopped) throw new Error("Recording has already stopped");
+      stopped = true;
       let flushError: unknown;
       try {
         await encoder.flush();
       } catch (e) {
         flushError = e;
       } finally {
-        encoder.close();
+        if (encoder.state !== "closed") encoder.close();
       }
       muxer.finalize();
       const buf = muxer.target.buffer;
@@ -155,6 +161,12 @@ export function createRecorder(
       scaleCtx = null;
       if (flushError) throw flushError;
       return new Blob([buf], { type: "video/mp4" });
+    },
+    cancel() {
+      stopped = true;
+      if (encoder && encoder.state !== "closed") encoder.close();
+      scaleCanvas = null;
+      scaleCtx = null;
     },
   };
 }

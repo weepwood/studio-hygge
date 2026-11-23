@@ -207,17 +207,19 @@ export function SavedDesignsPanel({ open, onOpenChange }: SavedDesignsPanelProps
                 return (
                   <div
                     key={design.id}
-                    className="group cursor-pointer rounded-2xl border border-border-control/65 bg-[#f0eae0]/55 p-2.5 transition-colors hover:border-border-hover hover:bg-[#f0eae0]"
-                    onClick={() => handleLoad(design)}
+                    className="group rounded-2xl border border-border-control/65 bg-[#f0eae0]/55 p-2.5 transition-colors hover:border-border-hover hover:bg-[#f0eae0] focus-within:border-hygge-rust"
                   >
                     {/* Thumbnail */}
                     <div className="relative overflow-hidden rounded-[17px] border border-border-control/70 bg-[#e6d5c1]/30">
-                      <img
-                        src={design.thumbnail}
-                        alt={design.name}
-                        className="aspect-[1.18/1] w-full object-cover transition-transform duration-300 group-hover:scale-[1.025]"
-                        draggable={false}
-                      />
+                      <button type="button" aria-label={isChinese ? `打开${design.name}` : `Open ${design.name}`} onClick={() => handleLoad(design)} className="block w-full rounded-[17px] focus-visible:outline-2 focus-visible:outline-hygge-rust">
+                        <img
+                          src={design.thumbnail}
+                          alt={design.name}
+                          loading="lazy"
+                          className="aspect-[1.18/1] w-full object-cover transition-transform duration-300 group-hover:scale-[1.025]"
+                          draggable={false}
+                        />
+                      </button>
                       <button
                         type="button"
                         aria-label={t('Delete design')}
@@ -225,7 +227,7 @@ export function SavedDesignsPanel({ open, onOpenChange }: SavedDesignsPanelProps
                           e.stopPropagation()
                           handleDelete(design.id)
                         }}
-                        className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#faf7f2]/90 text-text-secondary opacity-0 shadow-sm transition-opacity duration-150 hover:text-hygge-rust group-hover:opacity-100"
+                        className="absolute top-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-[#faf7f2]/90 text-text-secondary opacity-100 shadow-sm transition-opacity duration-150 hover:text-hygge-rust focus-visible:outline-2 focus-visible:outline-hygge-rust sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                       >
                         <X className="size-4 shrink-0" />
                       </button>

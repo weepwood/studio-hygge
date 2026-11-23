@@ -1,10 +1,14 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type p5 from 'p5'
 import { useSettings } from '@/hooks/use-settings'
 import { useP5 } from '@/hooks/use-p5'
-import { exportPNG, exportSVG, generateFilename } from '@/lib/export'
+import { exportSVG, generateFilename } from '@/lib/export'
 import { CanvasArea } from '@/components/canvas-area'
+import { CanvasToolbar } from '@/components/canvas-toolbar'
+import { resolveCanvasSize, resolvePreviewSize, type PreviewQuality } from '@/lib/canvas-size'
+import { withExportSketch } from '@/lib/export-p5'
+import { canvasPNG, downloadBlob, waitForPaint } from '@/lib/export-blob'
 import { CanvasRenderFeedback, type RenderStatus } from '@/components/canvas-render-feedback'
 import { Sidebar } from '@/components/sidebar'
 import { Section } from '@/components/controls/section'
@@ -48,19 +52,48 @@ export default function Blocks() {
   const [renderStatus, setRenderStatus] = useState<RenderStatus>('loading')
   const containerRef = useRef<HTMLDivElement>(null)
   const geometryRef = useRef<BlocksGeometry | null>(null)
-  const [settings, update, reset] = useSettings<BlocksSettings>('blocks', DEFAULTS)
+  const [settings, update, reset, undo, redo, canUndo, canRedo] = useSettings<BlocksSettings>('blocks', DEFAULTS)
+  const [quality, setQuality] = useState<PreviewQuality>('auto')
+  const [zoom, setZoom] = useState(1)
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
+  const exportBusyRef = useRef(false)
+  const previewSettings = useMemo(() => {
+    const [fullW,fullH] = resolveCanvasSize(settings.canvasPreset, settings.customWidth, settings.customHeight)
+    const [w, h] = resolvePreviewSize([fullW,fullH], quality)
+    return {...settings, canvasPreset: 'custom' as CanvasPreset, customWidth:w, customHeight:h,
+      lineWeight:settings.lineWeight*w/fullW}
+  }, [settings, quality])
+  async function runExport(task: () => Promise<void>) {
+    if (exportBusyRef.current) return
+    exportBusyRef.current = true
+    setExporting(true)
+    setExportError(null)
+    try {
+      await waitForPaint()
+      await task()
+    } catch(error) {
+      console.error('Export failed:',error)
+      setExportError(error instanceof Error ? error.message : 'Export failed')
+    } finally {
+      exportBusyRef.current = false
+      setExporting(false)
+    }
+  }
   const sketchFn = useCallback(
-    (p: p5, settingsRef: RefObject<BlocksSettings>) => createBlocksSketch(p, settingsRef, geometryRef),
+    (p: p5, settingsRef: RefObject<BlocksSettings>) => createBlocksSketch(p, settingsRef, geometryRef, () => setRenderStatus('ready')),
     [],
   )
-  const p5Ref = useP5(containerRef, sketchFn, settings, {
-    onReady: () => setRenderStatus('ready'),
+  useP5(containerRef, sketchFn, previewSettings, {
     onError: () => setRenderStatus('error'),
   })
+  useEffect(() => setRenderStatus('loading'), [previewSettings])
   const hasRasterEffects = settings.texture > 0 || settings.grain > 0 || settings.halftone > 0
   useShortcutActions({
     randomize,
     reset,
+    undo,
+    redo,
     download: hasRasterEffects ? handleExportPNG : handleExportSVG,
     exportPng: handleExportPNG,
     exportSvg: handleExportSVG,
@@ -110,17 +143,25 @@ export default function Blocks() {
   }
 
   function handleExportSVG() {
-    const geo = geometryRef.current
-    if (!geo) return
-    const svg = generateBlocksSvg(geo, settings)
-    if (svg) exportSVG(svg, generateFilename('blocks', 'svg'))
+    void runExport(() => withExportSketch<BlocksSettings, BlocksGeometry, void>(
+      settings, createBlocksSketch, (_canvas, geo) => {
+        if (!geo) throw new Error('Vector geometry is not ready')
+        const svg = generateBlocksSvg(geo, settings)
+        if (!svg) throw new Error('Unable to generate SVG')
+        exportSVG(svg, generateFilename('blocks', 'svg'))
+      },
+      true,
+    ))
   }
 
   function handleExportPNG() {
-    const canvas = (p5Ref.current as unknown as { canvas: HTMLCanvasElement })?.canvas
-    if (canvas) {
-      exportPNG(canvas, generateFilename('blocks', 'png'))
-    }
+    void runExport(() => withExportSketch<BlocksSettings, BlocksGeometry, void>(
+      settings, createBlocksSketch, async (canvas) => {
+        const blob = await canvasPNG(canvas)
+        downloadBlob(blob, generateFilename('blocks', 'png'))
+      },
+      true,
+    ))
   }
 
   return (
@@ -224,6 +265,7 @@ export default function Blocks() {
               { value: 'mondrian', label: 'Mondrian' },
               { value: 'neo-mondrian', label: 'Neo-Mondrian' },
               { value: 'warm', label: 'Warm' },
+              { value: 'hygge', label: 'Hygge' },
               { value: 'cool', label: 'Cool' },
               { value: 'monochrome', label: 'Monochrome' },
               { value: 'custom', label: 'Custom' },
@@ -329,8 +371,9 @@ export default function Blocks() {
         </Section>
 
       </Sidebar>
-      <CanvasArea ref={containerRef}>
+      <CanvasArea ref={containerRef} className="preview-stage" style={{'--preview-zoom':zoom} as React.CSSProperties}>
         <CanvasRenderFeedback status={renderStatus} />
+        <CanvasToolbar onUndo={undo} onRedo={redo} canUndo={canUndo} canRedo={canRedo} zoom={zoom} onZoomChange={setZoom} quality={quality} onQualityChange={setQuality} exporting={exporting} exportError={exportError} />
       </CanvasArea>
     </>
   )

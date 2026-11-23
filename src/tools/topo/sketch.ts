@@ -2,6 +2,7 @@ import type p5 from 'p5'
 import type { RefObject } from 'react'
 import type { TopoSettings, Point, ContourPath, TopoGeometry } from './types'
 import { hexToRgb } from '@/lib/color'
+import { seededRandom } from '@/lib/math'
 import { resolveCanvasSize } from '@/lib/canvas-size'
 
 const GRID_SIZE = 200
@@ -414,9 +415,10 @@ export function createTopoSketch(
     const imageData = c.getImageData(0, 0, w, h)
     const data = imageData.data
     const strength = s.grain
+    const random = seededRandom(s.seed ^ 0x4f2d3b19)
 
     for (let i = 0; i < data.length; i += 4) {
-      const v = ((Math.random() - 0.5) * strength) | 0
+      const v = ((random() - 0.5) * strength) | 0
       data[i]     = data[i]     + v < 0 ? 0 : data[i]     + v > 255 ? 255 : data[i]     + v
       data[i + 1] = data[i + 1] + v < 0 ? 0 : data[i + 1] + v > 255 ? 255 : data[i + 1] + v
       data[i + 2] = data[i + 2] + v < 0 ? 0 : data[i + 2] + v > 255 ? 255 : data[i + 2] + v

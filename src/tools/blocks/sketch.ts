@@ -3,6 +3,7 @@ import type { RefObject } from 'react'
 import type { BlocksSettings, RectBlock, PolyBlock, BlocksGeometry } from './types'
 import { seededRandom } from '@/lib/math'
 import { resolveCanvasSize } from '@/lib/canvas-size'
+import { processBlocksPixels } from './effects'
 
 export const PALETTES: Record<string, string[]> = {
   mondrian: ['#c92a2a', '#1862a8', '#f4d03f', '#ffffff', '#ffffff'],
@@ -20,7 +21,7 @@ export function pickColor(rng: () => number, colorDensity: number, colors: strin
   return colors[Math.floor(rng() * 2 + 3) % colors.length]
 }
 
-export function createBlocksSketch(p: p5, settingsRef: RefObject<BlocksSettings>, geometryRef?: RefObject<BlocksGeometry | null>) {
+export function createBlocksSketch(p: p5, settingsRef: RefObject<BlocksSettings>, geometryRef?: RefObject<BlocksGeometry | null>, onFrameReady?: () => void) {
   const ctx = () => p.drawingContext as CanvasRenderingContext2D
 
   // Cached geometry
@@ -35,6 +36,21 @@ export function createBlocksSketch(p: p5, settingsRef: RefObject<BlocksSettings>
   let cachedNoiseMap: Float32Array | null = null
   let cachedNoiseMapW = 0
   let cachedNoiseMapDims = ''
+  let worker: Worker | null = null
+  let effectTimer: ReturnType<typeof setTimeout> | null = null
+  let revision = 0
+  let disposed = false
+  function cancelEffect() {
+    revision++
+    if (effectTimer !== null) clearTimeout(effectTimer)
+    effectTimer = null
+    worker?.terminate()
+    worker = null
+  }
+  ;(p as p5 & {cleanupEffects?: () => void}).cleanupEffects = () => {
+    disposed = true
+    cancelEffect()
+  }
 
   function layoutKey(s: BlocksSettings): string {
     return `${s.seed}|${s.patternType}|${s.blockCount}|${s.complexity}|${s.asymmetry}|${s.gridDivisions}|${s.canvasPreset}|${s.customWidth}|${s.customHeight}`
@@ -160,8 +176,11 @@ export function createBlocksSketch(p: p5, settingsRef: RefObject<BlocksSettings>
     }
 
     // Post-processing effects
+    cancelEffect()
     if (s.texture > 0 || s.grain > 0 || s.halftone > 0) {
       applyEffects(s)
+    } else {
+      onFrameReady?.()
     }
   }
 
@@ -474,188 +493,77 @@ export function createBlocksSketch(p: p5, settingsRef: RefObject<BlocksSettings>
   }
 
   // --- Post-processing effects ---
-
   function applyEffects(s: BlocksSettings) {
     const c = ctx()
     const d = p.pixelDensity()
     const w = p.width * d
     const h = p.height * d
     const imageData = c.getImageData(0, 0, w, h)
-    const data = imageData.data
-
-    const textureStrength = s.texture / 100
-    const grainStrength = s.grain / 100
-    const halftoneStrength = s.halftone / 100
-
-    // Texture + grain pass
-    if (textureStrength > 0 || grainStrength > 0) {
-      const textureVariation = textureStrength * 50
-      const grainVariation = grainStrength * 35
-
-      // Noise map only depends on canvas dimensions (always seeded with 42).
-      // Cache it so dragging texture/grain sliders doesn't recompute Perlin noise.
-      let noiseMap: Float32Array | null = null
-      let nmW = 0
-      if (textureStrength > 0) {
-        const dims = `${w}|${h}|${d}`
-        if (cachedNoiseMap && cachedNoiseMapDims === dims) {
-          noiseMap = cachedNoiseMap
-          nmW = cachedNoiseMapW
-        } else {
-          p.noiseSeed(42)
-          const step = 2
-          nmW = Math.ceil(w / (d * step))
-          const nmH = Math.ceil(h / (d * step))
-          noiseMap = new Float32Array(nmW * nmH)
-          for (let ny = 0; ny < nmH; ny++) {
-            const py = ny * step
-            for (let nx = 0; nx < nmW; nx++) {
-              const px = nx * step
-              const fine = p.noise(px * 0.5, py * 0.5) - 0.5
-              const med = p.noise(px * 0.08 + 100, py * 0.08 + 100) - 0.5
-              const coarse = p.noise(px * 0.02 + 200, py * 0.02 + 200) - 0.5
-              noiseMap[ny * nmW + nx] = (fine * 0.4 + med * 0.35 + coarse * 0.25) * 2
-            }
+    let noiseMap: Float32Array | null = null
+    let nmW = 0
+    if (s.texture > 0) {
+      const dims = `${w}|${h}|${d}`
+      if (cachedNoiseMap && cachedNoiseMapDims === dims) {
+        noiseMap = cachedNoiseMap
+        nmW = cachedNoiseMapW
+      } else {
+        p.noiseSeed(42)
+        const step = 2
+        nmW = Math.ceil(w / (d * step))
+        const nmH = Math.ceil(h / (d * step))
+        noiseMap = new Float32Array(nmW * nmH)
+        for (let ny = 0; ny < nmH; ny++) {
+          const py = ny * step
+          for (let nx = 0; nx < nmW; nx++) {
+            const px = nx * step
+            const fine = p.noise(px * 0.5, py * 0.5) - 0.5
+            const med = p.noise(px * 0.08 + 100, py * 0.08 + 100) - 0.5
+            const coarse = p.noise(px * 0.02 + 200, py * 0.02 + 200) - 0.5
+            noiseMap[ny * nmW + nx] = (fine * 0.4 + med * 0.35 + coarse * 0.25) * 2
           }
-          cachedNoiseMap = noiseMap
-          cachedNoiseMapW = nmW
-          cachedNoiseMapDims = dims
         }
-      }
-
-      const invD2 = 1 / (d * 2)
-      const hasGrain = grainStrength > 0
-      const grainScale = grainVariation * 2
-
-      for (let y = 0; y < h; y++) {
-        const rowOffset = y * w * 4
-        const ny = (y * invD2) | 0
-        const noiseRowOffset = ny * nmW
-        for (let x = 0; x < w; x++) {
-          const i = rowOffset + x * 4
-          let variation = 0
-
-          if (noiseMap) {
-            const nx = (x * invD2) | 0
-            variation += noiseMap[noiseRowOffset + nx] * textureVariation
-          }
-
-          if (hasGrain) {
-            variation += (Math.random() - 0.5) * grainScale
-          }
-
-          // Ternary clamp avoids Math.min/Math.max function call overhead
-          let v = data[i] + variation
-          data[i] = v > 255 ? 255 : v < 0 ? 0 : v
-          v = data[i + 1] + variation
-          data[i + 1] = v > 255 ? 255 : v < 0 ? 0 : v
-          v = data[i + 2] + variation
-          data[i + 2] = v > 255 ? 255 : v < 0 ? 0 : v
-        }
+        cachedNoiseMap = noiseMap
+        cachedNoiseMapW = nmW
+        cachedNoiseMapDims = dims
       }
     }
-
-    // Halftone pass
-    if (halftoneStrength > 0) {
-      const originalData = new Uint8ClampedArray(data)
-      const dotSpacing = s.halftoneSize * 2
-      const maxDotSize = dotSpacing * 0.9
-      const maxDotSizeSq = maxDotSize * maxDotSize
-      const halftoneAngle = s.halftoneAngle * (Math.PI / 180)
-      const misalign = (s.halftoneMisalign / 100) * 4
-      // Pre-compute offsets × pixelDensity
-      const cyanOX = -misalign * d
-      const cyanOY = misalign * 0.7 * d
-      const magentaOX = misalign * 0.8 * d
-      const magentaOY = -misalign * 0.5 * d
-      const yellowOX = misalign * 0.3 * d
-      const yellowOY = misalign * d
-
-      const paperR = 252
-      const paperG = 250
-      const paperB = 245
-
-      const cosA = Math.cos(halftoneAngle)
-      const sinA = Math.sin(halftoneAngle)
-      const centerX = dotSpacing / 2
-      const centerY = dotSpacing / 2
-
-      const blend = halftoneStrength * 0.7
-      const wMinus1 = w - 1
-      const hMinus1 = h - 1
-      const inv255 = 1 / 255
-
-      for (let y = 0; y < h; y++) {
-        const rowOffset = y * w
-        const rotYsinA = y * sinA
-        const rotYcosA = y * cosA
-        for (let x = 0; x < w; x++) {
-          const i = (rowOffset + x) * 4
-          const rotX = x * cosA - rotYsinA
-          const rotY = x * sinA + rotYcosA
-          const gridX = ((rotX % dotSpacing) + dotSpacing) % dotSpacing
-          const gridY = ((rotY % dotSpacing) + dotSpacing) % dotSpacing
-          const dx = gridX - centerX
-          const dy = gridY - centerY
-          // Compare dist² instead of dist to avoid sqrt
-          const distSq = dx * dx + dy * dy
-
-          // Inline color sampling — avoids closure + object allocation per call
-          let sx: number, sy: number, si: number
-
-          sx = x + cyanOX
-          sx = sx > wMinus1 ? wMinus1 : sx < 0 ? 0 : sx | 0
-          sy = y + cyanOY
-          sy = sy > hMinus1 ? hMinus1 : sy < 0 ? 0 : sy | 0
-          si = (sy * w + sx) * 4
-          const cyan = 255 - originalData[si]
-
-          sx = x + magentaOX
-          sx = sx > wMinus1 ? wMinus1 : sx < 0 ? 0 : sx | 0
-          sy = y + magentaOY
-          sy = sy > hMinus1 ? hMinus1 : sy < 0 ? 0 : sy | 0
-          si = (sy * w + sx) * 4
-          const magenta = 255 - originalData[si + 1]
-
-          sx = x + yellowOX
-          sx = sx > wMinus1 ? wMinus1 : sx < 0 ? 0 : sx | 0
-          sy = y + yellowOY
-          sy = sy > hMinus1 ? hMinus1 : sy < 0 ? 0 : sy | 0
-          si = (sy * w + sx) * 4
-          const yellow = 255 - originalData[si + 2]
-
-          si = (rowOffset + x) * 4
-          const bkR = 255 - originalData[si]
-          const bkG = 255 - originalData[si + 1]
-          const bkB = 255 - originalData[si + 2]
-          const black = bkR < bkG ? (bkR < bkB ? bkR : bkB) : (bkG < bkB ? bkG : bkB)
-
-          // Compare dot size² against dist² to avoid sqrt
-          const cyanDotSq = (cyan * inv255) * (cyan * inv255) * maxDotSizeSq
-          const magentaDotSq = (magenta * inv255) * (magenta * inv255) * maxDotSizeSq
-          const yellowDotSq = (yellow * inv255) * (yellow * inv255) * maxDotSizeSq
-          const blackDotSq = (black * inv255) * 0.7 * (black * inv255) * 0.7 * maxDotSizeSq
-
-          let finalR = paperR
-          let finalG = paperG
-          let finalB = paperB
-
-          if (distSq < cyanDotSq) { finalR -= 200; finalG -= 30; finalB -= 20 }
-          if (distSq < magentaDotSq) { finalR -= 30; finalG -= 180; finalB -= 30 }
-          if (distSq < yellowDotSq) { finalR -= 10; finalG -= 20; finalB -= 200 }
-          if (distSq < blackDotSq) { finalR -= 60; finalG -= 60; finalB -= 60 }
-
-          finalR = finalR > 255 ? 255 : finalR < 0 ? 0 : finalR
-          finalG = finalG > 255 ? 255 : finalG < 0 ? 0 : finalG
-          finalB = finalB > 255 ? 255 : finalB < 0 ? 0 : finalB
-
-          data[i] = data[i] + (finalR - data[i]) * blend
-          data[i + 1] = data[i + 1] + (finalG - data[i + 1]) * blend
-          data[i + 2] = data[i + 2] + (finalB - data[i + 2]) * blend
-        }
+    const thisRevision = revision
+    // Paint geometry immediately, defer CPU-bound pixel work until the slider settles.
+    effectTimer = setTimeout(() => {
+      effectTimer = null
+      if (disposed || thisRevision !== revision) return
+      function fallback() {
+        if (disposed || thisRevision !== revision) return
+        // A failed Worker may already own the transferred buffer.
+        const current = c.getImageData(0,0,w,h)
+        processBlocksPixels(current.data,w,h,d,s,noiseMap,nmW)
+        c.putImageData(current,0,0)
+        onFrameReady?.()
       }
-    }
-
-    c.putImageData(imageData, 0, 0)
+      try {
+        worker = new Worker(new URL('./effects.worker.ts', import.meta.url), {type:'module'})
+        worker.onmessage = (event: MessageEvent<{id:number;pixels:ArrayBuffer;width:number;height:number}>) => {
+          if (disposed || event.data.id !== revision) return
+          const pixels = new Uint8ClampedArray(event.data.pixels)
+          c.putImageData(new ImageData(pixels,event.data.width,event.data.height),0,0)
+          worker?.terminate()
+          worker = null
+          onFrameReady?.()
+        }
+        worker.onerror = () => {
+          worker?.terminate()
+          worker = null
+          fallback()
+        }
+        worker.postMessage({
+          id:thisRevision, width:w,height:h,density:d,
+          pixels:imageData.data.buffer, settings:s, noiseMap, noiseMapWidth:nmW,
+        }, [imageData.data.buffer])
+      } catch {
+        worker?.terminate()
+        worker = null
+        fallback()
+      }
+    }, 70)
   }
 }

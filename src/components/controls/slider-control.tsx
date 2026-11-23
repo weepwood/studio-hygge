@@ -28,6 +28,7 @@ export function SliderControl({
   const [editing, setEditing] = useState(false)
   const [inputValue, setInputValue] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
+  const cancelledRef = useRef(false)
 
   useEffect(() => {
     if (editing) {
@@ -38,6 +39,10 @@ export function SliderControl({
 
   function commitValue() {
     setEditing(false)
+    if (cancelledRef.current) {
+      cancelledRef.current = false
+      return
+    }
     const parsed = parseFloat(inputValue)
     if (isNaN(parsed)) return
     onChange(normalizeSteppedValue(parsed, min, max, step, decimals))
@@ -56,7 +61,10 @@ export function SliderControl({
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") commitValue()
-              if (e.key === "Escape") setEditing(false)
+              if (e.key === "Escape") {
+                cancelledRef.current = true
+                setEditing(false)
+              }
             }}
             onBlur={commitValue}
             size={Math.max(inputValue.length, 1)}
@@ -64,16 +72,19 @@ export function SliderControl({
             style={{ width: `${Math.max(inputValue.length, 1) + 1}ch` }}
           />
         ) : (
-          <span
-            className="font-mono text-xs tabular-nums text-text-tertiary cursor-text"
+          <button
+            type="button"
+            aria-label={isChinese ? `编辑${t(label)}数值` : `Edit ${label} value`}
+            className="font-mono text-xs tabular-nums text-text-tertiary cursor-text rounded-sm focus-visible:outline-2 focus-visible:outline-hygge-rust"
             onClick={() => {
+              cancelledRef.current = false
               setInputValue(value.toFixed(decimals))
               setEditing(true)
             }}
           >
             {value.toFixed(decimals)}
             {unit}
-          </span>
+          </button>
         )}
       </div>
       <Slider

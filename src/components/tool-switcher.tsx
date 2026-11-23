@@ -1,7 +1,7 @@
 import { setStoredValue } from "@/lib/safe-storage"
 import { useState, useEffect } from "react"
 import { NavLink, useLocation } from "react-router-dom"
-import { BookmarkCheck, BookmarkPlus, Dices, Download, FileImage, Image, RotateCcw, Video } from "lucide-react"
+import { BookmarkCheck, BookmarkPlus, Dices, Download, FileImage, Image, RotateCcw, Video, Undo2, Redo2 } from "lucide-react"
 import { preloadTool, tools } from "@/tools/registry"
 import { ToolIcon } from "@/components/icons"
 import { useMobile } from "@/hooks/use-mobile"
@@ -42,7 +42,7 @@ export function ToolSwitcher() {
   const [savedOpen, setSavedOpen] = useState(false)
   const [bounce, setBounce] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "duplicate">("idle")
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "duplicate" | "rendering">("idle")
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle")
   const currentToolId = useLocation().pathname.slice(1)
   const currentTool = tools.find((tool) => tool.id === currentToolId) ?? tools[0]
@@ -69,6 +69,11 @@ export function ToolSwitcher() {
   useEffect(() => {
     shortcutActions.save = () => {
       const canvas = document.querySelector("canvas") as HTMLCanvasElement | null
+      if (document.querySelector('[aria-busy="true"][role="status"]')) {
+        setSaveStatus("rendering")
+        setTimeout(() => setSaveStatus("idle"), 1500)
+        return
+      }
       const settings = shortcutActions.getSettings?.()
       if (!canvas || !settings) return
       saveDesign(currentTool.id, settings, canvas).then((saved) => {
@@ -93,6 +98,10 @@ export function ToolSwitcher() {
   const actions = (
     <div className="space-y-2.5">
       <div className="space-y-0.5">
+        <div className="grid grid-cols-2 gap-1">
+          <ActionButton icon={<Undo2 className="size-4" />} label={t("Undo")} onClick={() => shortcutActions.undo?.()} />
+          <ActionButton icon={<Redo2 className="size-4" />} label={t("Redo")} onClick={() => shortcutActions.redo?.()} />
+        </div>
         <ActionButton icon={<Dices className="size-4" />} label={t("Randomize")} shortcut="R" onClick={() => shortcutActions.randomize?.()} />
         <ActionButton icon={<RotateCcw className="size-4" />} label={t("Reset")} shortcut="⌫" onClick={() => shortcutActions.reset?.()} />
       </div>
@@ -120,7 +129,7 @@ export function ToolSwitcher() {
       <div className="space-y-0.5 border-t border-border-control/70 pt-2">
         <ActionButton
           icon={<BookmarkPlus className="size-4" />}
-          label={t(saveStatus === "saved" ? "Saved!" : saveStatus === "duplicate" ? "Already saved" : "Save Design")}
+          label={t(saveStatus === "saved" ? "Saved!" : saveStatus === "duplicate" ? "Already saved" : saveStatus === "rendering" ? "Wait for preview" : "Save Design")}
           shortcut={saveStatus === "idle" ? "S" : undefined}
           onClick={() => shortcutActions.save?.()}
         />

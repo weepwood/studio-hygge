@@ -11,6 +11,22 @@ A quiet little generative art studio with three tools: Topo, Blocks, and Marble.
 Each tool saves its settings locally. Use the bookmark in the left rail to save and revisit designs.
 Use the language button in the upper-right corner to switch between English and Simplified Chinese.
 
+
+
+## Preview performance and export
+
+The canvas toolbar offers **Auto**, **Fast**, **Balanced**, and **Detail** preview quality.
+Preview resolution is capped to keep interactions responsive; PNG and SVG exports render
+at the selected original output dimensions. Exporting can take longer than previewing.
+
+Topo and Blocks support undo/redo (`Cmd/Ctrl+Z` and `Cmd/Ctrl+Shift+Z`).
+Blocks processes texture/grain/halftone effects in a Web Worker when permitted, with a
+main-thread fallback in restricted embedded contexts. Marble supports WebGL2
+context recovery and up to 60 seconds of MP4 recording on compatible browsers.
+
+See [Optimization details](docs/optimization-2026-11-23.md) for known tradeoffs, testing
+steps and compatibility notes.
+
 ## Run locally
 
 Requires Node.js 18 or newer.

@@ -63,6 +63,7 @@ export function useP5<T>(
       if (instance) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ;(instance as any).hitCriticalError = true
+        ;(instance as p5 & {cleanupEffects?: () => void}).cleanupEffects?.()
         instance.remove()
         instanceRef.current = null
       }

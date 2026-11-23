@@ -35,9 +35,12 @@ export function settingsFromBase64Url(
   encoded: string,
 ): Record<string, unknown> | null {
   try {
+    if (encoded.length > 16384) return null
     let s = encoded.replace(/-/g, "+").replace(/_/g, "/")
     while (s.length % 4) s += "="
-    return JSON.parse(atob(s))
+    const decoded: unknown = JSON.parse(atob(s))
+    if (!decoded || typeof decoded !== "object" || Array.isArray(decoded)) return null
+    return decoded as Record<string, unknown>
   } catch {
     return null
   }
