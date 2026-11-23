@@ -4,6 +4,10 @@ import {setTimeout as delay} from 'node:timers/promises'
 import {chromium} from 'playwright'
 
 const site = 'http://127.0.0.1:4173'
+setTimeout(() => {
+  console.error('Browser smoke watchdog: exceeded 180 seconds')
+  process.exit(1)
+},180000).unref()
 const server = spawn('npm',['run','dev','--','--host','127.0.0.1','--port','4173','--strictPort'],{stdio:'pipe', env:{...process.env,GITHUB_ACTIONS:'false'}})
 let logs = ''
 for(const channel of [server.stdout, server.stderr]) channel.on('data',b=>{logs+=b.toString()})
