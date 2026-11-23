@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 import { useSettings } from "@/hooks/use-settings"
 import { CanvasArea } from "@/components/canvas-area"
+import { CanvasRenderFeedback, type RenderStatus } from "@/components/canvas-render-feedback"
+import { scheduleAfterPaint } from "@/lib/schedule-after-paint"
 import { Sidebar } from "@/components/sidebar"
 import { Section } from "@/components/controls/section"
 import { SliderControl } from "@/components/controls/slider-control"
@@ -25,21 +27,40 @@ export default function Marble() {
   const recorderRef = useRef<Recorder | null>(null)
   const settingsRef = useRef(settings)
   const [isRecording, setIsRecording] = useState(false)
+  const [renderStatus, setRenderStatus] = useState<RenderStatus>("loading")
   settingsRef.current = settings
 
-  // Init engine on mount
+  // Mount controls immediately; compile shaders only once the tool page has painted.
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const [w, h] = resolveCanvasSize(settings.canvasPreset, settings.customWidth, settings.customHeight)
-    canvas.width = w
-    canvas.height = h
-    engineRef.current = createMarbleEngine(canvas, settingsRef, recorderRef)
+    let disposed = false
+    const cancelScheduled = scheduleAfterPaint(() => {
+      if (disposed) return
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const current = settingsRef.current
+      const [w, h] = resolveCanvasSize(current.canvasPreset, current.customWidth, current.customHeight)
+      canvas.width = w
+      canvas.height = h
+      try {
+        const engine = createMarbleEngine(canvas, settingsRef, recorderRef, () => {
+          if (!disposed) setRenderStatus("ready")
+        })
+        if (disposed) engine?.destroy()
+        else {
+          engineRef.current = engine
+          if (!engine) setRenderStatus("error")
+        }
+      } catch (error) {
+        console.error("Unable to initialize Marble:", error)
+        if (!disposed) setRenderStatus("error")
+      }
+    })
     return () => {
+      disposed = true
+      cancelScheduled()
       engineRef.current?.destroy()
       engineRef.current = null
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Re-render when settings change (starts/stops animation loop as needed)
@@ -304,6 +325,7 @@ export default function Marble() {
           ref={canvasRef}
           style={{ maxWidth: "100%", maxHeight: "100%" }}
         />
+        <CanvasRenderFeedback status={renderStatus} />
       </CanvasArea>
     </>
   )

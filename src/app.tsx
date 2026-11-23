@@ -2,21 +2,24 @@ import { Suspense, lazy } from "react"
 import { Routes, Route, Navigate } from "react-router-dom"
 import { AppShell } from "@/components/app-shell"
 import { tools } from "@/tools/registry"
-import { useI18n } from "@/lib/i18n"
+import { Sidebar } from "@/components/sidebar"
+import { CanvasArea } from "@/components/canvas-area"
+import { CanvasRenderFeedback } from "@/components/canvas-render-feedback"
 
 const Home = lazy(() => import("@/tools/home"))
 
 function ToolLoading() {
-  const { t } = useI18n()
   return (
     <>
-      <div className="hidden w-sidebar shrink-0 flex-col border-r border-border-control bg-sidebar md:flex" />
-      <div className="flex flex-1 items-center justify-center bg-canvas">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-text-muted border-t-transparent" />
-          <span className="text-xs text-text-muted">{t("Loading")}</span>
+      <Sidebar>
+        <div className="mb-6 h-6 w-28 animate-pulse rounded-lg bg-hygge-oat/80" />
+        <div className="space-y-5" aria-hidden="true">
+          <div className="h-24 animate-pulse rounded-xl bg-hygge-oat/45" />
+          <div className="h-32 animate-pulse rounded-xl bg-hygge-oat/45" />
+          <div className="h-24 animate-pulse rounded-xl bg-hygge-oat/45" />
         </div>
-      </div>
+      </Sidebar>
+      <CanvasArea><CanvasRenderFeedback /></CanvasArea>
     </>
   )
 }

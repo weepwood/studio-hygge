@@ -60,6 +60,7 @@ export function createMarbleEngine(
   canvas: HTMLCanvasElement,
   settingsRef: RefObject<MarbleSettings>,
   recorderRef?: MutableRefObject<Recorder | null>,
+  onFirstFrame?: () => void,
 ): MarbleEngine | null {
   const ctx = canvas.getContext("webgl2", {
     preserveDrawingBuffer: true,
@@ -117,6 +118,7 @@ export function createMarbleEngine(
   let animTime = 0
   let lastFrameTime = performance.now()
   let destroyed = false
+  let hasRenderedFirstFrame = false
 
   function renderOneFrame(advanceTime: boolean) {
     const s = settingsRef.current
@@ -167,6 +169,10 @@ export function createMarbleEngine(
     }
 
     gl.drawArrays(gl.TRIANGLES, 0, 3)
+    if (!hasRenderedFirstFrame) {
+      hasRenderedFirstFrame = true
+      onFirstFrame?.()
+    }
 
     if (recorderRef?.current) {
       recorderRef.current.addFrame(canvas)

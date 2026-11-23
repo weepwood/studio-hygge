@@ -2,7 +2,7 @@ import { setStoredValue } from "@/lib/safe-storage"
 import { useState, useEffect } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 import { BookmarkCheck, BookmarkPlus, Dices, Download, FileImage, Image, RotateCcw, Video } from "lucide-react"
-import { tools } from "@/tools/registry"
+import { preloadTool, tools } from "@/tools/registry"
 import { ToolIcon } from "@/components/icons"
 import { useMobile } from "@/hooks/use-mobile"
 import { SavedDesignsPanel } from "@/components/saved-designs-panel"
@@ -154,6 +154,8 @@ export function ToolSwitcher() {
                   <NavLink
                     key={tool.id}
                     to={`/${tool.id}`}
+                    onPointerEnter={() => preloadTool(tool.id)}
+                    onFocus={() => preloadTool(tool.id)}
                     onClick={() => {
                       setStoredValue("studio:last-tool", tool.id)
                       setOpen(false)
@@ -193,6 +195,8 @@ export function ToolSwitcher() {
             <NavLink
               key={tool.id}
               to={`/${tool.id}`}
+              onPointerEnter={() => preloadTool(tool.id)}
+              onFocus={() => preloadTool(tool.id)}
               onClick={() => setStoredValue("studio:last-tool", tool.id)}
               className="flex items-center gap-3 rounded-xl px-2.5 py-2 transition-colors hover:bg-[#e6d5c1]/35"
             >

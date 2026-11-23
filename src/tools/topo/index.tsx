@@ -1,10 +1,11 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type p5 from 'p5'
 import { useSettings } from '@/hooks/use-settings'
 import { useP5 } from '@/hooks/use-p5'
 import { exportPNG, exportSVG, generateFilename } from '@/lib/export'
 import { CanvasArea } from '@/components/canvas-area'
+import { CanvasRenderFeedback, type RenderStatus } from '@/components/canvas-render-feedback'
 import { Sidebar } from '@/components/sidebar'
 import { Section } from '@/components/controls/section'
 import { SliderControl } from '@/components/controls/slider-control'
@@ -60,6 +61,7 @@ function randomColor(): string {
 }
 
 export default function Topo() {
+  const [renderStatus, setRenderStatus] = useState<RenderStatus>('loading')
   const containerRef = useRef<HTMLDivElement>(null)
   const geometryRef = useRef<TopoGeometry | null>(null)
   const [settings, update, reset] = useSettings<TopoSettings>('topo', DEFAULTS)
@@ -67,7 +69,10 @@ export default function Topo() {
     (p: p5, settingsRef: RefObject<TopoSettings>) => createTopoSketch(p, settingsRef, geometryRef),
     [],
   )
-  const p5Ref = useP5(containerRef, sketchFn, settings)
+  const p5Ref = useP5(containerRef, sketchFn, settings, {
+    onReady: () => setRenderStatus('ready'),
+    onError: () => setRenderStatus('error'),
+  })
   const hasRasterEffects = settings.grain > 0
   useShortcutActions({
     randomize,
@@ -307,7 +312,9 @@ export default function Topo() {
         </Section>
 
       </Sidebar>
-      <CanvasArea ref={containerRef} />
+      <CanvasArea ref={containerRef}>
+        <CanvasRenderFeedback status={renderStatus} />
+      </CanvasArea>
     </>
   )
 }
