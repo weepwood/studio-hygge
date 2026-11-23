@@ -1,10 +1,14 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type p5 from 'p5'
 import { useSettings } from '@/hooks/use-settings'
 import { useP5 } from '@/hooks/use-p5'
-import { exportPNG, exportSVG, generateFilename } from '@/lib/export'
+import { exportSVG, generateFilename } from '@/lib/export'
 import { CanvasArea } from '@/components/canvas-area'
+import { CanvasToolbar } from '@/components/canvas-toolbar'
+import { resolveCanvasSize, resolvePreviewSize, type PreviewQuality } from '@/lib/canvas-size'
+import { withExportSketch } from '@/lib/export-p5'
+import { canvasPNG, downloadBlob, waitForPaint } from '@/lib/export-blob'
 import { CanvasRenderFeedback, type RenderStatus } from '@/components/canvas-render-feedback'
 import { Sidebar } from '@/components/sidebar'
 import { Section } from '@/components/controls/section'
@@ -65,11 +69,36 @@ export default function Topo() {
   const containerRef = useRef<HTMLDivElement>(null)
   const geometryRef = useRef<TopoGeometry | null>(null)
   const [settings, update, reset] = useSettings<TopoSettings>('topo', DEFAULTS)
+  const [quality, setQuality] = useState<PreviewQuality>('balanced')
+  const [zoom, setZoom] = useState(1)
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
+  const exportBusyRef = useRef(false)
+  const previewSettings = useMemo(() => {
+    const [w, h] = resolvePreviewSize(resolveCanvasSize(settings.canvasPreset, settings.customWidth, settings.customHeight), quality)
+    return {...settings, canvasPreset: 'custom' as CanvasPreset, customWidth:w, customHeight:h}
+  }, [settings, quality])
+  async function runExport(task: () => Promise<void>) {
+    if (exportBusyRef.current) return
+    exportBusyRef.current = true
+    setExporting(true)
+    setExportError(null)
+    try {
+      await waitForPaint()
+      await task()
+    } catch(error) {
+      console.error('Export failed:',error)
+      setExportError(error instanceof Error ? error.message : 'Export failed')
+    } finally {
+      exportBusyRef.current = false
+      setExporting(false)
+    }
+  }
   const sketchFn = useCallback(
     (p: p5, settingsRef: RefObject<TopoSettings>) => createTopoSketch(p, settingsRef, geometryRef),
     [],
   )
-  const p5Ref = useP5(containerRef, sketchFn, settings, {
+  useP5(containerRef, sketchFn, previewSettings, {
     onReady: () => setRenderStatus('ready'),
     onError: () => setRenderStatus('error'),
   })
@@ -131,17 +160,23 @@ export default function Topo() {
   }
 
   function handleExportSVG() {
-    const geo = geometryRef.current
-    if (!geo) return
-    const svg = generateTopoSvg(geo, settings)
-    if (svg) exportSVG(svg, generateFilename('topo', 'svg'))
+    void runExport(() => withExportSketch<TopoSettings, TopoGeometry, void>(
+      settings, createTopoSketch, (_canvas, geo) => {
+        if (!geo) throw new Error('Vector geometry is not ready')
+        const svg = generateTopoSvg(geo, settings)
+        if (!svg) throw new Error('Unable to generate SVG')
+        exportSVG(svg, generateFilename('topo', 'svg'))
+      },
+    ))
   }
 
   function handleExportPNG() {
-    const canvas = (p5Ref.current as unknown as { canvas: HTMLCanvasElement })?.canvas
-    if (canvas) {
-      exportPNG(canvas, generateFilename('topo', 'png'))
-    }
+    void runExport(() => withExportSketch<TopoSettings, TopoGeometry, void>(
+      settings, createTopoSketch, async (canvas) => {
+        const blob = await canvasPNG(canvas)
+        downloadBlob(blob, generateFilename('topo', 'png'))
+      },
+    ))
   }
 
   return (
@@ -312,8 +347,9 @@ export default function Topo() {
         </Section>
 
       </Sidebar>
-      <CanvasArea ref={containerRef}>
+      <CanvasArea ref={containerRef} className="preview-stage" style={{'--preview-zoom':zoom} as React.CSSProperties}>
         <CanvasRenderFeedback status={renderStatus} />
+        <CanvasToolbar zoom={zoom} onZoomChange={setZoom} quality={quality} onQualityChange={setQuality} exporting={exporting} exportError={exportError} />
       </CanvasArea>
     </>
   )
