@@ -5,8 +5,9 @@ import { scheduleAfterPaint } from "@/lib/schedule-after-paint"
 /** Render an isolated full-resolution p5 sketch on demand. Preview canvas is never resized. */
 export function withExportSketch<T, G, R>(
   settings: T,
-  createSketch: (p: p5, settingsRef: RefObject<T>, geometryRef: RefObject<G | null>) => void,
+  createSketch: (p: p5, settingsRef: RefObject<T>, geometryRef: RefObject<G | null>, onFrameReady?: () => void) => void,
   capture: (canvas: HTMLCanvasElement, geometry: G | null) => Promise<R> | R,
+  waitForFrame = false,
 ): Promise<R> {
   return new Promise<R>((resolve, reject) => {
     const host = document.createElement("div")
@@ -27,6 +28,7 @@ export function withExportSketch<T, G, R>(
       if (instance) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ;(instance as any).hitCriticalError = true
+        ;(instance as p5 & {cleanupEffects?: () => void}).cleanupEffects?.()
         instance.remove()
       }
       host.remove()
@@ -37,21 +39,23 @@ export function withExportSketch<T, G, R>(
       if (done) return
       try {
         instance = new p5((p) => {
-          createSketch(p, settingsRef, geometryRef)
+          function captureWhenReady() {
+            if (started) return
+            started = true
+            window.setTimeout(() => {
+              if (done) return
+              const canvas = (p as unknown as {canvas?: HTMLCanvasElement}).canvas
+              if (!canvas) { finish(new Error("Canvas unavailable")); return }
+              Promise.resolve().then(() => capture(canvas, geometryRef.current))
+                .then(value => finish(undefined, value), error => finish(error))
+            }, 0)
+          }
+          createSketch(p, settingsRef, geometryRef, captureWhenReady)
           const setup = p.setup
           p.setup = () => {
             try {
               setup?.()
-              if (started) return
-              started = true
-              // setup() draws the complete image in both current p5 sketches.
-              window.setTimeout(() => {
-                if (done) return
-                const canvas = (p as unknown as {canvas?: HTMLCanvasElement}).canvas
-                if (!canvas) { finish(new Error("Canvas unavailable")); return }
-                Promise.resolve().then(() => capture(canvas, geometryRef.current))
-                  .then(value => finish(undefined, value), error => finish(error))
-              }, 0)
+              if (!waitForFrame) captureWhenReady()
             } catch (error) { finish(error); throw error }
           }
         }, host)

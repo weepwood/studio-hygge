@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type p5 from 'p5'
 import { useSettings } from '@/hooks/use-settings'
@@ -79,13 +79,13 @@ export default function Blocks() {
     }
   }
   const sketchFn = useCallback(
-    (p: p5, settingsRef: RefObject<BlocksSettings>) => createBlocksSketch(p, settingsRef, geometryRef),
+    (p: p5, settingsRef: RefObject<BlocksSettings>) => createBlocksSketch(p, settingsRef, geometryRef, () => setRenderStatus('ready')),
     [],
   )
   useP5(containerRef, sketchFn, previewSettings, {
-    onReady: () => setRenderStatus('ready'),
     onError: () => setRenderStatus('error'),
   })
+  useEffect(() => setRenderStatus('loading'), [previewSettings])
   const hasRasterEffects = settings.texture > 0 || settings.grain > 0 || settings.halftone > 0
   useShortcutActions({
     randomize,
@@ -148,6 +148,7 @@ export default function Blocks() {
         if (!svg) throw new Error('Unable to generate SVG')
         exportSVG(svg, generateFilename('blocks', 'svg'))
       },
+      true,
     ))
   }
 
@@ -157,6 +158,7 @@ export default function Blocks() {
         const blob = await canvasPNG(canvas)
         downloadBlob(blob, generateFilename('blocks', 'png'))
       },
+      true,
     ))
   }
 
