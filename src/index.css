@@ -141,6 +141,8 @@ aside h2 {
   letter-spacing: -.025em;
 }
 
+/* Canvas scaling is purely visual; all raster exports use their own original resolution. */
+.preview-stage canvas { transform: scale(var(--preview-zoom, 1)); transform-origin: center; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }

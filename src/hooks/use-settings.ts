@@ -2,6 +2,7 @@ import { getStoredValue, setStoredValue } from "@/lib/safe-storage"
 import { useState, useCallback, useRef, useEffect } from "react";
 import { shortcutActions } from "@/lib/shortcut-actions";
 import { settingsFromBase64Url } from "@/lib/url-settings";
+import { sanitizeSettings } from "@/lib/settings-schema";
 
 /**
  * Persist tool settings to localStorage with debounced writes.
@@ -22,7 +23,7 @@ export function useSettings<T extends Record<string, unknown>>(
     if (encoded) {
       const decoded = settingsFromBase64Url(encoded);
       if (decoded) {
-        const merged = { ...defaults, ...(decoded as Partial<T>) };
+        const merged = sanitizeSettings(key, decoded, defaults);
         setStoredValue(storageKey, JSON.stringify(merged));
         try { window.history.replaceState({}, "", window.location.pathname); } catch { /* opaque iframe origin */ }
         return merged;
@@ -33,7 +34,7 @@ export function useSettings<T extends Record<string, unknown>>(
       const raw = getStoredValue(storageKey);
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<T>;
-        return { ...defaults, ...parsed };
+        return sanitizeSettings(key, parsed, defaults);
       }
     } catch {
       // corrupted data — fall through to defaults
@@ -107,7 +108,7 @@ export function useSettings<T extends Record<string, unknown>>(
         clearPendingWrite()
         const raw = getStoredValue(storageKey)
         if (raw) {
-          const next = { ...defaults, ...JSON.parse(raw) }
+          const next = sanitizeSettings(key, JSON.parse(raw), defaults)
           latestRef.current = next
           setSettings(next)
         }
@@ -122,12 +123,12 @@ export function useSettings<T extends Record<string, unknown>>(
   const update = useCallback(
     (patch: Partial<T>) => {
       setSettings((prev) => {
-        const next = { ...prev, ...patch };
+        const next = sanitizeSettings(key, { ...prev, ...patch }, defaults);
         writeToStorage(next);
         return next;
       });
     },
-    [writeToStorage],
+    [writeToStorage, key, defaults],
   );
 
   const reset = useCallback(() => {
