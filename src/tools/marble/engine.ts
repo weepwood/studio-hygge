@@ -67,12 +67,17 @@ export function createMarbleEngine(
     premultipliedAlpha: false,
   })
   if (!ctx) return null
+  if (canvas.width > ctx.getParameter(ctx.MAX_RENDERBUFFER_SIZE) || canvas.height > ctx.getParameter(ctx.MAX_RENDERBUFFER_SIZE)) return null
   // Local alias so TypeScript narrows the type in closures
   const gl: WebGL2RenderingContext = ctx
 
   const vert = compileShader(gl, gl.VERTEX_SHADER, VERT_SHADER)
   const frag = compileShader(gl, gl.FRAGMENT_SHADER, FRAG_SHADER)
-  if (!vert || !frag) return null
+  if (!vert || !frag) {
+    if (vert) gl.deleteShader(vert)
+    if (frag) gl.deleteShader(frag)
+    return null
+  }
 
   const program = gl.createProgram()!
   gl.attachShader(program, vert)
@@ -80,6 +85,9 @@ export function createMarbleEngine(
   gl.linkProgram(program)
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
     console.error("Program link error:", gl.getProgramInfoLog(program))
+    gl.deleteProgram(program)
+    gl.deleteShader(vert)
+    gl.deleteShader(frag)
     return null
   }
 
