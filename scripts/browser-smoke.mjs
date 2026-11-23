@@ -8,7 +8,7 @@ setTimeout(() => {
   console.error('Browser smoke watchdog: exceeded 180 seconds')
   process.exit(1)
 },180000).unref()
-const server = spawn('npm',['run','dev','--','--host','127.0.0.1','--port','4173','--strictPort'],{stdio:'pipe', env:{...process.env,GITHUB_ACTIONS:'false'}})
+const server = spawn('npm',['run','dev','--','--host','127.0.0.1','--port','4173','--strictPort'],{stdio:'pipe', detached:true, env:{...process.env,GITHUB_ACTIONS:'false'}})
 let logs = ''
 for(const channel of [server.stdout, server.stderr]) channel.on('data',b=>{logs+=b.toString()})
 let browser
@@ -70,7 +70,16 @@ try {
   await page.locator('canvas').first().waitFor({state:'attached',timeout:30000})
   if(errors.length)throw new Error('Browser exceptions: '+errors.join('; '))
   console.log('Browser smoke test passed')
+} catch(error) {
+  console.error('Browser smoke failed:',error)
+  process.exitCode = 1
 } finally {
-  if(browser) await browser.close()
-  server.kill('SIGTERM')
+  try {if(browser) await Promise.race([browser.close(),delay(5000)])} catch {}
+  try {process.kill(-server.pid,'SIGTERM')} catch {server.kill('SIGTERM')}
+  server.stdout?.destroy()
+  server.stderr?.destroy()
+  // npm may leave child processes with inherited pipes; do not turn a passing
+  // test into a timeout after the browser has already been closed.
+  await delay(100)
+  process.exit(process.exitCode ?? 0)
 }
