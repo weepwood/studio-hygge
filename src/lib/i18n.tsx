@@ -3,20 +3,14 @@ import { createContext, useContext } from "react"
 export type Language = "en" | "zh"
 
 export const zh: Record<string, string> = {
-  "A small creative nook": "一间安静的小小创作角落",
   "Studio": "创作室",
   "Studio home": "创作室首页",
   "Loading": "正在加载",
   "Close": "关闭",
   "Switch tool": "切换效果",
-  "Generative art for slower moments. Choose a starting point, find a rhythm, and make something that feels like yours.": "为慢下来的时刻创作生成艺术。选一个起点，找到自己的节奏，做出真正属于你的作品。",
-  "Contours & quiet landscapes": "等高线与静谧地景",
-  "A little order, a little chance": "一点秩序，一点偶然",
-  "Fluid color, softly layered": "柔和叠染的流动画色",
   "Choose an effect": "选择一种效果",
   "Quick actions": "快捷操作",
   "Explore": "开始创作",
-  "Made for making, at your own pace": "按照自己的节奏，慢慢创作",
   "Saved designs": "已保存作品",
   "Saved": "已保存",
   "Save Design": "保存作品",

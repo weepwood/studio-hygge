@@ -1,15 +1,15 @@
 import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { ArrowUpRight, Sparkles } from "lucide-react"
+import { ArrowUpRight } from "lucide-react"
 import { tools } from "@/tools/registry"
 import { useFavicon } from "@/hooks/use-favicon"
 import { useI18n } from "@/lib/i18n"
 import { LanguageToggle } from "@/components/language-toggle"
 
-const previews: Record<string, { image: string; note: string; number: string }> = {
-  topo: { image: `${import.meta.env.BASE_URL}topo.jpg`, note: "Contours & quiet landscapes", number: "01" },
-  blocks: { image: `${import.meta.env.BASE_URL}blocks.jpg`, note: "A little order, a little chance", number: "02" },
-  marble: { image: `${import.meta.env.BASE_URL}marble.jpg`, note: "Fluid color, softly layered", number: "03" },
+const previews: Record<string, { image: string; number: string }> = {
+  topo: { image: `${import.meta.env.BASE_URL}topo.jpg`, number: "01" },
+  blocks: { image: `${import.meta.env.BASE_URL}blocks.jpg`, number: "02" },
+  marble: { image: `${import.meta.env.BASE_URL}marble.jpg`, number: "03" },
 }
 
 export default function Home() {
@@ -26,16 +26,9 @@ export default function Home() {
       <LanguageToggle />
       <div className="relative z-10 w-full max-w-6xl">
         <header className="mx-auto mb-12 max-w-2xl text-center md:mb-16">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border-control bg-surface-elevated/70 px-3 py-1.5 text-[11px] font-medium uppercase tracking-[.16em] text-hygge-rust">
-            <Sparkles className="size-3.5" strokeWidth={1.6} />
-            {t("A small creative nook")}
-          </div>
           <h1 className="font-serif text-5xl font-normal tracking-[-.04em] text-text-primary sm:text-6xl md:text-7xl">
             Studio<span className="italic text-hygge-rust">.</span>
           </h1>
-          <p className="mx-auto mt-5 max-w-lg text-sm leading-7 text-text-secondary sm:text-base">
-            {t("Generative art for slower moments. Choose a starting point, find a rhythm, and make something that feels like yours.")}
-          </p>
         </header>
 
         <section aria-label={t("Choose an effect")} className="grid gap-5 md:grid-cols-3 md:gap-6">
@@ -67,23 +60,14 @@ export default function Home() {
                     <ArrowUpRight className="size-4" />
                   </span>
                 </div>
-                <div className="flex items-end justify-between gap-4 px-5 py-4 md:px-6 md:py-5">
-                  <div>
-                    <h2 className="font-serif text-2xl font-normal tracking-[-.02em] text-text-primary">{tool.name}</h2>
-                    <p className="mt-1.5 text-xs leading-5 text-text-tertiary">{t(preview.note)}</p>
-                  </div>
-                  <span className="mb-1 text-[10px] uppercase tracking-[.16em] text-hygge-sage">{t("Explore")}</span>
+                <div className="flex items-center justify-between gap-4 px-5 py-4 md:px-6 md:py-5">
+                  <h2 className="font-serif text-2xl font-normal tracking-[-.02em] text-text-primary">{tool.name}</h2>
+                  <span className="text-[10px] uppercase tracking-[.16em] text-hygge-sage">{t("Explore")}</span>
                 </div>
               </button>
             )
           })}
         </section>
-
-        <footer className="mt-10 flex items-center justify-center gap-2 text-[11px] tracking-wide text-text-tertiary md:mt-14">
-          <span className="h-px w-7 bg-border-control" />
-          {t("Made for making, at your own pace")}
-          <span className="h-px w-7 bg-border-control" />
-        </footer>
       </div>
     </main>
   )
