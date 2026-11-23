@@ -17,8 +17,15 @@ async function waitForServer() {
   throw new Error('Vite did not start: '+logs)
 }
 async function waitForPreview(page, tool) {
-  await page.goto(site+'/'+tool)
-  await page.getByRole('heading',{name:tool,exact:true}).waitFor({timeout:30000})
+  const response = await page.goto(site+'/'+tool)
+  console.log('Opening',tool,'response',response?.status(),'url',page.url())
+  try {
+    await page.getByRole('heading',{name:tool,exact:true}).waitFor({timeout:30000})
+  } catch(error) {
+    console.error('Body snapshot:',(await page.locator('body').innerText()).slice(0,1600))
+    console.error('Page errors:',errors)
+    throw error
+  }
   await page.locator('canvas').first().waitFor({state:'attached',timeout:30000})
   await page.waitForFunction(()=>!document.querySelector('[aria-busy="true"][role="status"]'),null,{timeout:60000})
   const size=await page.locator('canvas').first().evaluate(c=>({w:c.width,h:c.height}))
@@ -30,7 +37,7 @@ try {
   browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader']})
   const page=await browser.newPage({viewport:{width:1440,height:900},acceptDownloads:true})
   const errors=[]
-  page.on('pageerror',error=>errors.push(error.message))
+  page.on('pageerror',error=>{errors.push(error.message);console.error('Page exception:',error.message)})
   await waitForPreview(page,'topo')
   await page.locator('#preview-quality').selectOption('detail')
   await page.waitForFunction(()=>document.querySelector('canvas')?.width===1680,null,{timeout:30000})
