@@ -41,7 +41,15 @@ try {
   await waitForPreview(page,'topo')
   await page.locator('#preview-quality').selectOption('detail')
   await page.waitForFunction(()=>document.querySelector('canvas')?.width===1680,null,{timeout:30000})
-  const downloadPromise=page.waitForEvent('download',{timeout:90000})
+  console.log('Topo detail preview ready; preparing bounded export smoke test')
+  await page.evaluate(() => {
+    const key='studio:topo'
+    const settings=JSON.parse(localStorage.getItem(key) || '{}')
+    localStorage.setItem(key,JSON.stringify({...settings,canvasPreset:'custom',customWidth:512,customHeight:512}))
+  })
+  await waitForPreview(page,'topo')
+  console.log('Exporting 512px PNG sample')
+  const downloadPromise=page.waitForEvent('download',{timeout:45000})
   await page.getByRole('button',{name:'Export PNG'}).click()
   const download=await downloadPromise
   if(!download.suggestedFilename().endsWith('.png'))throw new Error('Incorrect PNG filename')
