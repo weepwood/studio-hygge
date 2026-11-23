@@ -154,8 +154,6 @@ export function ToolSwitcher() {
                   <NavLink
                     key={tool.id}
                     to={`/${tool.id}`}
-              onPointerEnter={() => preloadTool(tool.id)}
-              onFocus={() => preloadTool(tool.id)}
                     onPointerEnter={() => preloadTool(tool.id)}
                     onFocus={() => preloadTool(tool.id)}
                     onClick={() => {
@@ -197,6 +195,8 @@ export function ToolSwitcher() {
             <NavLink
               key={tool.id}
               to={`/${tool.id}`}
+              onPointerEnter={() => preloadTool(tool.id)}
+              onFocus={() => preloadTool(tool.id)}
               onClick={() => setStoredValue("studio:last-tool", tool.id)}
               className="flex items-center gap-3 rounded-xl px-2.5 py-2 transition-colors hover:bg-[#e6d5c1]/35"
             >
