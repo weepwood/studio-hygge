@@ -4,7 +4,7 @@ import {setTimeout as delay} from 'node:timers/promises'
 import {chromium} from 'playwright'
 
 const site = 'http://127.0.0.1:4173'
-const server = spawn('npm',['run','dev','--','--host','127.0.0.1','--port','4173','--strictPort'],{stdio:'pipe'})
+const server = spawn('npm',['run','dev','--','--host','127.0.0.1','--port','4173','--strictPort'],{stdio:'pipe', env:{...process.env,GITHUB_ACTIONS:'false'}})
 let logs = ''
 for(const channel of [server.stdout, server.stderr]) channel.on('data',b=>{logs+=b.toString()})
 let browser
@@ -23,7 +23,7 @@ async function waitForPreview(page, tool) {
     await page.getByRole('heading',{name:tool[0].toUpperCase()+tool.slice(1),exact:true}).waitFor({timeout:30000})
   } catch(error) {
     console.error('Body snapshot:',(await page.locator('body').innerText()).slice(0,1600))
-    console.error('Page errors:',errors)
+    console.error('Unable to find expected heading')
     throw error
   }
   await page.locator('canvas').first().waitFor({state:'attached',timeout:30000})
