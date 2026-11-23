@@ -2,7 +2,7 @@ import { setStoredValue } from "@/lib/safe-storage"
 import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowUpRight } from "lucide-react"
-import { tools } from "@/tools/registry"
+import { preloadTool, tools } from "@/tools/registry"
 import { useFavicon } from "@/hooks/use-favicon"
 import { useI18n } from "@/lib/i18n"
 import { LanguageToggle } from "@/components/language-toggle"
@@ -41,6 +41,8 @@ export default function Home() {
               <button
                 key={tool.id}
                 type="button"
+                onPointerEnter={() => preloadTool(tool.id)}
+                onFocus={() => preloadTool(tool.id)}
                 onClick={() => {
                   setStoredValue("studio:last-tool", tool.id)
                   navigate(`/${tool.id}`)

@@ -1,10 +1,11 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type p5 from 'p5'
 import { useSettings } from '@/hooks/use-settings'
 import { useP5 } from '@/hooks/use-p5'
 import { exportPNG, exportSVG, generateFilename } from '@/lib/export'
 import { CanvasArea } from '@/components/canvas-area'
+import { CanvasRenderFeedback, type RenderStatus } from '@/components/canvas-render-feedback'
 import { Sidebar } from '@/components/sidebar'
 import { Section } from '@/components/controls/section'
 import { SliderControl } from '@/components/controls/slider-control'
@@ -44,6 +45,7 @@ const DEFAULTS: BlocksSettings = {
 }
 
 export default function Blocks() {
+  const [renderStatus, setRenderStatus] = useState<RenderStatus>('loading')
   const containerRef = useRef<HTMLDivElement>(null)
   const geometryRef = useRef<BlocksGeometry | null>(null)
   const [settings, update, reset] = useSettings<BlocksSettings>('blocks', DEFAULTS)
@@ -51,7 +53,10 @@ export default function Blocks() {
     (p: p5, settingsRef: RefObject<BlocksSettings>) => createBlocksSketch(p, settingsRef, geometryRef),
     [],
   )
-  const p5Ref = useP5(containerRef, sketchFn, settings)
+  const p5Ref = useP5(containerRef, sketchFn, settings, {
+    onReady: () => setRenderStatus('ready'),
+    onError: () => setRenderStatus('error'),
+  })
   const hasRasterEffects = settings.texture > 0 || settings.grain > 0 || settings.halftone > 0
   useShortcutActions({
     randomize,
@@ -324,7 +329,9 @@ export default function Blocks() {
         </Section>
 
       </Sidebar>
-      <CanvasArea ref={containerRef} />
+      <CanvasArea ref={containerRef}>
+        <CanvasRenderFeedback status={renderStatus} />
+      </CanvasArea>
     </>
   )
 }
